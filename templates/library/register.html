@@ -1,0 +1,514 @@
+{% extends 'base.html' %}
+{% load library_extras %}
+
+{% block title %}Add New User - LibraryPro{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
+            <p class="mt-1 text-sm text-gray-500">Add new users individually or import from CSV</p>
+        </div>
+        <a href="{% url 'user_list' %}"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Back to Users
+        </a>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="border-b border-gray-200">
+        <nav class="-mb-px flex space-x-8">
+            <button onclick="showTab('single')" id="single-tab"
+                    class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                <i class="fas fa-user mr-2"></i>
+                Single User
+            </button>
+            <button onclick="showTab('csv')" id="csv-tab"
+                    class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                <i class="fas fa-file-csv mr-2"></i>
+                CSV Import
+            </button>
+            <button onclick="showTab('api')" id="api-tab"
+                    class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                <i class="fas fa-cloud mr-2"></i>
+                API Integration
+            </button>
+        </nav>
+    </div>
+
+    <!-- Single User Form -->
+    <div id="single-content" class="tab-content">
+        <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+                <h3 class="text-xl font-bold text-gray-900">Add Individual User</h3>
+                <p class="mt-2 text-sm text-gray-600">Create a single user account manually</p>
+            </div>
+
+            <form method="post" class="p-8 space-y-8">
+                {% csrf_token %}
+
+            <!-- Account Information -->
+            <div class="space-y-6">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-key text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Account Information</h3>
+                        <p class="text-sm text-gray-500">Basic login credentials</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Username <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text"
+                                   name="username"
+                                   id="{{ form.username.id_for_label }}"
+                                   value="{{ form.username.value|default:'' }}"
+                                   class="pl-10 w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   placeholder="Enter username"
+                                   required>
+                        </div>
+                        {% if form.username.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.username.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <div class="mt-1 text-xs text-gray-500">
+                            Used for login. Must be unique.
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Email Address <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-envelope text-gray-400"></i>
+                            </div>
+                            <input type="email"
+                                   name="email"
+                                   id="{{ form.email.id_for_label }}"
+                                   value="{{ form.email.value|default:'' }}"
+                                   class="pl-10 w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   placeholder="Enter email address"
+                                   required>
+                        </div>
+                        {% if form.email.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.email.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Password <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-lock text-gray-400"></i>
+                            </div>
+                            <input type="password"
+                                   name="password1"
+                                   id="{{ form.password1.id_for_label }}"
+                                   class="pl-10 w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   placeholder="Enter password"
+                                   required>
+                        </div>
+                        {% if form.password1.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.password1.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Confirm Password <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-lock text-gray-400"></i>
+                            </div>
+                            <input type="password"
+                                   name="password2"
+                                   id="{{ form.password2.id_for_label }}"
+                                   class="pl-10 w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   placeholder="Confirm password"
+                                   required>
+                        </div>
+                        {% if form.password2.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.password2.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal Information -->
+            <div class="space-y-6 border-t border-gray-200 pt-8">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-user text-purple-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Personal Information</h3>
+                        <p class="text-sm text-gray-500">Basic personal details</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            First Name <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text"
+                                   name="first_name"
+                                   id="{{ form.first_name.id_for_label }}"
+                                   value="{{ form.first_name.value|default:'' }}"
+                                   class="pl-10 w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   placeholder="Enter first name"
+                                   required>
+                        </div>
+                        {% if form.first_name.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.first_name.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Last Name <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text"
+                                   name="last_name"
+                                   id="{{ form.last_name.id_for_label }}"
+                                   value="{{ form.last_name.value|default:'' }}"
+                                   class="pl-10 w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   placeholder="Enter last name"
+                                   required>
+                        </div>
+                        {% if form.last_name.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.last_name.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.phone_number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Phone Number
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-phone text-gray-400"></i>
+                            </div>
+                            {{ form.phone_number|add_class:"pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" }}
+                        </div>
+                        {% if form.phone_number.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.phone_number.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.date_of_birth.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Date of Birth
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-calendar text-gray-400"></i>
+                            </div>
+                            {{ form.date_of_birth|add_class:"pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" }}
+                        </div>
+                        {% if form.date_of_birth.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.date_of_birth.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="{{ form.address.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Address
+                        </label>
+                        <div class="relative">
+                            <div class="absolute top-3 left-3 pointer-events-none">
+                                <i class="fas fa-map-marker-alt text-gray-400"></i>
+                            </div>
+                            {{ form.address|add_class:"pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" }}
+                        </div>
+                        {% if form.address.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.address.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role and Academic Information -->
+            <div class="space-y-6 border-t border-gray-200 pt-8">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-graduation-cap text-orange-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Role & Academic Information</h3>
+                        <p class="text-sm text-gray-500">User role and academic details</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="{{ form.role.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Role <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user-tag text-gray-400"></i>
+                            </div>
+                            {{ form.role|add_class:"pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" }}
+                        </div>
+                        {% if form.role.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.role.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.enrollment_number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Enrollment/ID Number
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-id-card text-gray-400"></i>
+                            </div>
+                            {{ form.enrollment_number|add_class:"pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" }}
+                        </div>
+                        {% if form.enrollment_number.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.enrollment_number.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <div class="mt-1 text-xs text-gray-500">
+                            For students and staff identification
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.class_grade.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Class/Grade
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-graduation-cap text-gray-400"></i>
+                            </div>
+                            {{ form.class_grade|add_class:"pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" }}
+                        </div>
+                        {% if form.class_grade.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.class_grade.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <div class="mt-1 text-xs text-gray-500">
+                            For students only
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parent/Guardian Information (for students) -->
+            <div id="parent-info-section" class="bg-blue-50 rounded-xl p-6 border border-blue-200" style="display: none;">
+                <h3 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                    <i class="fas fa-users mr-3 text-blue-600"></i>
+                    Parent/Guardian Information
+                </h3>
+                <p class="text-sm text-blue-700 mb-6">
+                    Parent/Guardian email will receive notifications about book loans, due dates, and overdue notices.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="{{ form.parent_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Parent/Guardian Name
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-gray-400"></i>
+                            </div>
+                            {{ form.parent_name|add_class:"pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" }}
+                        </div>
+                        {% if form.parent_name.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.parent_name.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.parent_email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Parent/Guardian Email <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-envelope text-gray-400"></i>
+                            </div>
+                            {{ form.parent_email|add_class:"pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" }}
+                        </div>
+                        {% if form.parent_email.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.parent_email.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <div class="mt-1 text-xs text-gray-500">
+                            Required for students - will receive book notifications
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.parent_phone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Parent/Guardian Phone
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-phone text-gray-400"></i>
+                            </div>
+                            {{ form.parent_phone|add_class:"pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" }}
+                        </div>
+                        {% if form.parent_phone.errors %}
+                        <div class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.parent_phone.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Notification Email -->
+            <div class="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                <h3 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                    <i class="fas fa-envelope-plus mr-3 text-blue-600"></i>
+                    Additional Notification Email
+                </h3>
+                <p class="text-sm text-blue-700 mb-6">
+                    Optional additional email that will also receive notifications about book loans, due dates, and overdue notices.
+                    This could be a parent, guardian, or secondary contact email.
+                </p>
+
+                <div>
+                    <label for="{{ form.notification_email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Additional Email (Optional)
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-envelope text-gray-400"></i>
+                        </div>
+                        {{ form.notification_email|add_class:"pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" }}
+                    </div>
+                    {% if form.notification_email.errors %}
+                    <div class="mt-2 text-sm text-red-600 flex items-center">
+                        <i class="fas fa-exclamation-circle mr-1"></i>{{ form.notification_email.errors.0 }}
+                    </div>
+                    {% endif %}
+                    <div class="mt-1 text-xs text-gray-500">
+                        This email will receive copies of all library notifications sent to the user
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-4 pt-8 border-t border-gray-200">
+                <a href="{% url 'user_list' %}"
+                   class="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                    <i class="fas fa-times mr-2"></i>Cancel
+                </a>
+                <button type="submit"
+                        class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-all duration-200">
+                    <i class="fas fa-user-plus mr-2"></i>Create User
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide academic fields based on role
+    const roleSelect = document.getElementById('{{ form.role.id_for_label }}');
+    const enrollmentField = document.getElementById('{{ form.enrollment_number.id_for_label }}').closest('.grid > div');
+    const classField = document.getElementById('{{ form.class_grade.id_for_label }}').closest('.grid > div');
+
+    function toggleAcademicFields() {
+        const role = roleSelect.value;
+
+        if (role === 'student') {
+            enrollmentField.style.display = 'block';
+            classField.style.display = 'block';
+        } else if (role === 'teacher') {
+            enrollmentField.style.display = 'block';
+            classField.style.display = 'none';
+        } else {
+            enrollmentField.style.display = 'none';
+            classField.style.display = 'none';
+        }
+    }
+
+    if (roleSelect) {
+        roleSelect.addEventListener('change', toggleAcademicFields);
+        toggleAcademicFields(); // Initial call
+    }
+
+    // Tab functionality
+    window.showTab = function(tabName) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.style.display = 'none';
+        });
+
+        // Remove active class from all tabs
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.classList.remove('border-blue-500', 'text-blue-600');
+            button.classList.add('border-transparent', 'text-gray-500');
+        });
+
+        // Show selected tab content
+        const selectedContent = document.getElementById(tabName + '-content');
+        if (selectedContent) {
+            selectedContent.style.display = 'block';
+        }
+
+        // Activate selected tab
+        const selectedTab = document.getElementById(tabName + '-tab');
+        if (selectedTab) {
+            selectedTab.classList.remove('border-transparent', 'text-gray-500');
+            selectedTab.classList.add('border-blue-500', 'text-blue-600');
+        }
+    };
+
+    // Initialize first tab
+    showTab('single');
+});
+</script>
+{% endblock %}

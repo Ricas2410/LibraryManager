@@ -1,0 +1,856 @@
+{% extends 'base.html' %}
+{% load library_extras %}
+
+{% block title %}{{ title }} - LibraryPro{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+            <p class="mt-1 text-sm text-gray-500">
+                {% if book %}Update book information{% else %}Add a new book to the library collection{% endif %}
+            </p>
+        </div>
+        <a href="{% if book %}{% url 'book_detail' book.id %}{% else %}{% url 'book_list' %}{% endif %}" 
+           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Back
+        </a>
+    </div>
+
+    <form id="book-form" method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
+            <!-- Basic Information -->
+            <div class="px-8 py-6 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-book text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900">Basic Information</h3>
+                        <p class="text-sm text-gray-600">Essential book details</p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-8 py-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Title <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
+                                <i class="fas fa-book text-gray-400 text-sm"></i>
+                            </div>
+                            <input type="text" name="title" value="{{ form.title.value|default:'' }}"
+                                   class="pr-4 py-3 block w-full border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                   placeholder="Enter book title" required style="padding-left: 3rem;">
+                        </div>
+                        {% if form.title.errors %}
+                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.title.errors.0 }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Subtitle</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
+                                <i class="fas fa-heading text-gray-400 text-sm"></i>
+                            </div>
+                            <input type="text" name="subtitle" value="{{ form.subtitle.value|default:'' }}"
+                                   class="pr-4 py-3 block w-full border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                   placeholder="Enter book subtitle (optional)" style="padding-left: 3rem;">
+                        </div>
+                        {% if form.subtitle.errors %}
+                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.subtitle.errors.0 }}
+                        </p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            ISBN <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
+                                <i class="fas fa-barcode text-gray-400 text-sm"></i>
+                            </div>
+                            <input type="text" name="isbn" value="{{ form.isbn.value|default:'' }}"
+                                   class="pr-4 py-3 block w-full border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                   placeholder="978-0-123456-78-9" required style="padding-left: 3rem;">
+                        </div>
+                        {% if form.isbn.errors %}
+                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.isbn.errors.0 }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Publisher</label>
+                        <div class="relative">
+                            <input type="text"
+                                   id="publisher-input"
+                                   name="publisher_name"
+                                   value="{% if form.publisher.value %}{{ form.instance.publisher.name }}{% endif %}"
+                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   placeholder="Type publisher name..."
+                                   autocomplete="off">
+                            <input type="hidden" name="publisher" id="publisher-id" value="{{ form.publisher.value|default:'' }}">
+
+                            <!-- Autocomplete dropdown -->
+                            <div id="publisher-dropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                                <!-- Results will be populated here -->
+                            </div>
+                        </div>
+                        {% if form.publisher.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.publisher.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Type to search existing publishers or enter a new one</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Authors and Categories -->
+            <div class="px-6 py-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Authors and Categories</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Authors <span class="text-red-500">*</span>
+                        </label>
+                        <!-- Author Search -->
+                        <div class="mb-3">
+                            <input type="text" id="author-search" placeholder="Search authors..."
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                        <div class="border-2 border-gray-300 rounded-lg bg-white p-4 min-h-[200px] max-h-60 overflow-y-auto shadow-sm" id="authors-container">
+                            {% if form.authors.field.queryset %}
+                                {% for author in form.authors.field.queryset %}
+                                <label class="flex items-center space-x-3 py-2 hover:bg-gray-50 rounded-md px-2 cursor-pointer transition-colors duration-200">
+                                    <input type="checkbox" name="authors" value="{{ author.id }}"
+                                           {% if form.authors.value and author.id|stringformat:"s" in form.authors.value %}checked{% endif %}
+                                           class="h-4 w-4 rounded border-2 border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700 font-medium">{{ author.get_full_name }}</span>
+                                </label>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-8">
+                                    <i class="fas fa-user-edit text-4xl text-gray-300 mb-4"></i>
+                                    <p class="text-gray-500 mb-4">No authors found in the database.</p>
+                                    <button type="button" onclick="window.open('{% url 'author_add' %}', '_blank')" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                                        <i class="fas fa-plus mr-2"></i>Add First Author
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if form.authors.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.authors.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Select one or more authors for this book</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Categories <span class="text-red-500">*</span>
+                        </label>
+                        <!-- Category Search -->
+                        <div class="mb-3">
+                            <input type="text" id="category-search" placeholder="Search categories..."
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        </div>
+                        <div class="border-2 border-gray-300 rounded-lg bg-white p-4 min-h-[200px] max-h-60 overflow-y-auto shadow-sm" id="categories-container">
+                            {% if form.categories.field.queryset %}
+                                {% for category in form.categories.field.queryset %}
+                                <label class="flex items-center space-x-3 py-2 hover:bg-gray-50 rounded-md px-2 cursor-pointer transition-colors duration-200">
+                                    <input type="checkbox" name="categories" value="{{ category.id }}"
+                                           {% if form.categories.value and category.id|stringformat:"s" in form.categories.value %}checked{% endif %}
+                                           class="h-4 w-4 rounded border-2 border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700 font-medium">{{ category.name }}</span>
+                                </label>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-8">
+                                    <i class="fas fa-tags text-4xl text-gray-300 mb-4"></i>
+                                    <p class="text-gray-500 mb-4">No categories found in the database.</p>
+                                    <button type="button" onclick="window.open('{% url 'category_add' %}', '_blank')" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                                        <i class="fas fa-plus mr-2"></i>Add First Category
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if form.categories.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.categories.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Select one or more categories for this book</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Publication Details -->
+            <div class="px-6 py-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Publication Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Publication Date <span class="text-red-500">*</span>
+                        </label>
+                        <input type="date" name="publication_date" value="{{ form.publication_date.value|default:'' }}"
+                               class="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" required>
+                        {% if form.publication_date.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.publication_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Edition</label>
+                        <input type="text" name="edition" value="{{ form.edition.value|default:'' }}"
+                               class="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                               placeholder="1st, 2nd, etc.">
+                        {% if form.edition.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.edition.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Pages <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" name="pages" value="{{ form.pages.value|default:'' }}" min="1"
+                               class="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                               placeholder="Number of pages" required>
+                        {% if form.pages.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.pages.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Language</label>
+                        <select name="language" class="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+                            <option value="English" {% if form.language.value == 'English' %}selected{% endif %}>English</option>
+                            <option value="Spanish" {% if form.language.value == 'Spanish' %}selected{% endif %}>Spanish</option>
+                            <option value="French" {% if form.language.value == 'French' %}selected{% endif %}>French</option>
+                            <option value="German" {% if form.language.value == 'German' %}selected{% endif %}>German</option>
+                            <option value="Other" {% if form.language.value == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                        {% if form.language.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.language.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
+                                <span class="text-gray-500 text-sm font-medium">$</span>
+                            </div>
+                            <input type="number" name="price" value="{{ form.price.value|default:'' }}" step="0.01" min="0"
+                                   class="block w-full pr-4 py-3 border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                   placeholder="0.00" style="padding-left: 2.5rem;">
+                        </div>
+                        {% if form.price.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.price.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Location and Copies -->
+            <div class="px-6 py-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Location and Availability</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Section <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="text"
+                                   id="section-input"
+                                   name="section_name"
+                                   value="{% if form.section.value %}{{ form.instance.section.name }}{% endif %}"
+                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   placeholder="Type section name..."
+                                   autocomplete="off"
+                                   required>
+                            <input type="hidden" name="section" id="section-id" value="{{ form.section.value|default:'' }}">
+
+                            <!-- Autocomplete dropdown -->
+                            <div id="section-dropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                                <!-- Results will be populated here -->
+                            </div>
+                        </div>
+                        {% if form.section.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.section.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Type to search existing sections or enter a new one</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Shelf Location <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="text"
+                                   id="shelf-location-input"
+                                   name="shelf_location_code"
+                                   value="{% if form.shelf_location.value %}{{ form.instance.shelf_location.code }}{% endif %}"
+                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   placeholder="Type shelf code (e.g., A1, B2)..."
+                                   autocomplete="off"
+                                   required>
+                            <input type="hidden" name="shelf_location" id="shelf-location-id" value="{{ form.shelf_location.value|default:'' }}">
+
+                            <!-- Autocomplete dropdown -->
+                            <div id="shelf-location-dropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                                <!-- Results will be populated here -->
+                            </div>
+                        </div>
+                        {% if form.shelf_location.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.shelf_location.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Type to search existing shelf locations or enter a new one</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Floor</label>
+                        <div class="relative">
+                            <input type="text"
+                                   id="floor-input"
+                                   name="floor_name"
+                                   value="{% if form.floor.value %}{{ form.instance.floor.name }}{% endif %}"
+                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   placeholder="Type floor name..."
+                                   autocomplete="off">
+                            <input type="hidden" name="floor" id="floor-id" value="{{ form.floor.value|default:'' }}">
+
+                            <!-- Autocomplete dropdown -->
+                            <div id="floor-dropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                                <!-- Results will be populated here -->
+                            </div>
+                        </div>
+                        {% if form.floor.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.floor.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Type to search existing floors or enter a new one</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Total Copies <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" name="total_copies" value="{{ form.total_copies.value|default:'1' }}" min="1"
+                               class="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" required>
+                        {% if form.total_copies.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.total_copies.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="px-6 py-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Additional Information</h3>
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Cover Image</label>
+                        <input type="file" name="cover_image" accept="image/*"
+                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        {% if form.cover_image.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.cover_image.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Summary</label>
+                        <textarea name="summary" rows="4"
+                                  class="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                  placeholder="Brief description of the book...">{{ form.summary.value|default:'' }}</textarea>
+                        {% if form.summary.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.summary.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Internal Notes</label>
+                        <textarea name="notes" rows="3"
+                                  class="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                  placeholder="Internal notes for library staff...">{{ form.notes.value|default:'' }}</textarea>
+                        {% if form.notes.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+                <a href="{% if book %}{% url 'book_detail' book.id %}{% else %}{% url 'book_list' %}{% endif %}" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    Cancel
+                </a>
+                <button type="button" id="book-submit-btn"
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        onclick="handleBookSubmit()">
+                    <i class="fas fa-save mr-2"></i>
+                    <span id="book-submit-text">{% if book %}Update Book{% else %}Add Book{% endif %}</span>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Publisher Details Modal -->
+<div id="publisher-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Add New Publisher</h3>
+                <p class="text-sm text-gray-600">The publisher "<span id="new-publisher-name"></span>" is not in the database. Please provide additional information:</p>
+            </div>
+            <div class="px-6 py-4">
+                <form id="publisher-form">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Publisher Name</label>
+                            <input type="text" id="modal-publisher-name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                            <textarea id="modal-publisher-address" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Publisher address (optional)"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="modal-publisher-email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="contact@publisher.com (optional)">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                            <input type="tel" id="modal-publisher-phone" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="+1 (555) 123-4567 (optional)">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                            <input type="url" id="modal-publisher-website" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="https://publisher.com (optional)">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button type="button" id="cancel-publisher" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="button" id="save-publisher" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
+                    Add Publisher
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Autocomplete functionality
+class AutoComplete {
+    constructor(inputId, dropdownId, hiddenId, apiUrl, displayField = 'name') {
+        this.input = document.getElementById(inputId);
+        this.dropdown = document.getElementById(dropdownId);
+        this.hidden = document.getElementById(hiddenId);
+        this.apiUrl = apiUrl;
+        this.displayField = displayField;
+        this.selectedIndex = -1;
+        this.results = [];
+
+        this.init();
+    }
+
+    init() {
+        this.input.addEventListener('input', this.handleInput.bind(this));
+        this.input.addEventListener('keydown', this.handleKeydown.bind(this));
+        this.input.addEventListener('blur', this.handleBlur.bind(this));
+        this.input.addEventListener('focus', this.handleFocus.bind(this));
+    }
+
+    async handleInput(e) {
+        const query = e.target.value.trim();
+
+        if (query.length < 1) {
+            this.hideDropdown();
+            this.hidden.value = '';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiUrl}?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            this.results = data.results || [];
+            this.showResults();
+        } catch (error) {
+            console.error('Autocomplete error:', error);
+            this.hideDropdown();
+        }
+    }
+
+    showResults() {
+        if (this.results.length === 0) {
+            this.dropdown.innerHTML = '<div class="px-4 py-2 text-gray-500 text-sm">No results found</div>';
+        } else {
+            this.dropdown.innerHTML = this.results.map((item, index) =>
+                `<div class="autocomplete-item px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0" data-index="${index}">
+                    <div class="font-medium text-gray-900">${item[this.displayField]}</div>
+                    ${item.description ? `<div class="text-sm text-gray-500">${item.description}</div>` : ''}
+                </div>`
+            ).join('');
+        }
+
+        // Add click listeners
+        this.dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const index = parseInt(e.currentTarget.dataset.index);
+                this.selectItem(index);
+            });
+        });
+
+        this.dropdown.classList.remove('hidden');
+        this.selectedIndex = -1;
+    }
+
+    hideDropdown() {
+        this.dropdown.classList.add('hidden');
+        this.selectedIndex = -1;
+    }
+
+    selectItem(index) {
+        if (index >= 0 && index < this.results.length) {
+            const item = this.results[index];
+            this.input.value = item[this.displayField];
+            this.hidden.value = item.id;
+            this.hideDropdown();
+        }
+    }
+
+    handleKeydown(e) {
+        if (!this.dropdown.classList.contains('hidden')) {
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.selectedIndex = Math.min(this.selectedIndex + 1, this.results.length - 1);
+                    this.highlightItem();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.selectedIndex = Math.max(this.selectedIndex - 1, -1);
+                    this.highlightItem();
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (this.selectedIndex >= 0) {
+                        this.selectItem(this.selectedIndex);
+                    } else if (this.input.value.trim()) {
+                        // Handle new item creation
+                        this.handleNewItem();
+                    }
+                    break;
+                case 'Escape':
+                    this.hideDropdown();
+                    break;
+            }
+        }
+    }
+
+    highlightItem() {
+        this.dropdown.querySelectorAll('.autocomplete-item').forEach((item, index) => {
+            if (index === this.selectedIndex) {
+                item.classList.add('bg-blue-50');
+            } else {
+                item.classList.remove('bg-blue-50');
+            }
+        });
+    }
+
+    handleBlur(e) {
+        // Delay hiding to allow click events
+        setTimeout(() => {
+            if (!this.dropdown.contains(document.activeElement)) {
+                this.hideDropdown();
+            }
+        }, 150);
+    }
+
+    handleFocus(e) {
+        if (this.input.value.trim() && this.results.length > 0) {
+            this.showResults();
+        }
+    }
+
+    handleNewItem() {
+        // Override in subclasses for specific behavior
+        this.hidden.value = '';
+    }
+}
+
+// Publisher autocomplete with modal
+class PublisherAutoComplete extends AutoComplete {
+    handleNewItem() {
+        const publisherName = this.input.value.trim();
+        if (publisherName) {
+            // Check if exact match exists
+            const exactMatch = this.results.find(p => p.name.toLowerCase() === publisherName.toLowerCase());
+            if (exactMatch) {
+                this.selectItem(this.results.indexOf(exactMatch));
+                return;
+            }
+
+            // Show modal for new publisher
+            document.getElementById('new-publisher-name').textContent = publisherName;
+            document.getElementById('modal-publisher-name').value = publisherName;
+            document.getElementById('publisher-modal').classList.remove('hidden');
+        }
+    }
+}
+
+// Initialize autocomplete instances
+document.addEventListener('DOMContentLoaded', function() {
+    // Publisher autocomplete
+    const publisherAC = new PublisherAutoComplete(
+        'publisher-input',
+        'publisher-dropdown',
+        'publisher-id',
+        '/api/publishers/'
+    );
+
+    // Section autocomplete
+    new AutoComplete(
+        'section-input',
+        'section-dropdown',
+        'section-id',
+        '/api/sections/'
+    );
+
+    // Shelf location autocomplete
+    new AutoComplete(
+        'shelf-location-input',
+        'shelf-location-dropdown',
+        'shelf-location-id',
+        '/api/shelf-locations/',
+        'code'
+    );
+
+    // Floor autocomplete
+    new AutoComplete(
+        'floor-input',
+        'floor-dropdown',
+        'floor-id',
+        '/api/floors/'
+    );
+
+    // Publisher modal handlers
+    document.getElementById('cancel-publisher').addEventListener('click', function() {
+        document.getElementById('publisher-modal').classList.add('hidden');
+        document.getElementById('publisher-form').reset();
+    });
+
+    document.getElementById('save-publisher').addEventListener('click', async function() {
+        const publisherData = {
+            name: document.getElementById('modal-publisher-name').value,
+            address: document.getElementById('modal-publisher-address').value,
+            email: document.getElementById('modal-publisher-email').value,
+            phone: document.getElementById('modal-publisher-phone').value,
+            website: document.getElementById('modal-publisher-website').value
+        };
+
+        try {
+            const response = await fetch('/api/publishers/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(publisherData)
+            });
+
+            if (response.ok) {
+                const newPublisher = await response.json();
+                document.getElementById('publisher-input').value = newPublisher.name;
+                document.getElementById('publisher-id').value = newPublisher.id;
+                document.getElementById('publisher-modal').classList.add('hidden');
+                document.getElementById('publisher-form').reset();
+            } else {
+                alert('Error creating publisher. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error creating publisher. Please try again.');
+        }
+    });
+});
+
+// Book form submission handler
+function handleBookSubmit() {
+    console.log('🖱️ Book submit button clicked!');
+
+    // Basic validation
+    const titleInput = document.querySelector('input[name="title"]');
+    if (!titleInput || !titleInput.value.trim()) {
+        alert('Please enter a book title.');
+        return false;
+    }
+
+    // Validate authors selection
+    const selectedAuthors = document.querySelectorAll('input[name="authors"]:checked');
+    if (selectedAuthors.length === 0) {
+        alert('Please select at least one author.');
+        return false;
+    }
+
+    // Validate categories selection
+    const selectedCategories = document.querySelectorAll('input[name="categories"]:checked');
+    if (selectedCategories.length === 0) {
+        alert('Please select at least one category.');
+        return false;
+    }
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('book-submit-btn');
+    const submitText = document.getElementById('book-submit-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        console.log('✅ Loading state applied');
+    }
+
+    console.log('🚀 Submitting book form...');
+
+    // Find the specific book form by ID
+    const bookForm = document.getElementById('book-form');
+    if (bookForm) {
+        console.log('✅ Book form found, submitting...');
+        bookForm.submit();
+    } else {
+        console.log('❌ Book form not found');
+        alert('Error: Could not find the book form to submit.');
+        // Restore button state
+        if (submitBtn && submitText) {
+            submitBtn.disabled = false;
+            submitText.innerHTML = '{% if book %}Update Book{% else %}Add Book{% endif %}';
+        }
+    }
+
+    return false;
+}
+
+// Author and Category Search Functionality
+function initializeSearchableSelections() {
+    console.log('🔍 Initializing searchable selections...');
+
+    // Initialize author search
+    const authorSearch = document.getElementById('author-search');
+    const authorsContainer = document.getElementById('authors-container');
+
+    if (authorSearch && authorsContainer) {
+        // Store original authors HTML
+        const originalAuthorsHTML = authorsContainer.innerHTML;
+
+        authorSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+
+            if (searchTerm === '') {
+                // Show all authors
+                authorsContainer.innerHTML = originalAuthorsHTML;
+            } else {
+                // Filter authors
+                const authorLabels = authorsContainer.querySelectorAll('label');
+                authorLabels.forEach(label => {
+                    const authorName = label.textContent.toLowerCase();
+                    if (authorName.includes(searchTerm)) {
+                        label.style.display = 'flex';
+                    } else {
+                        label.style.display = 'none';
+                    }
+                });
+            }
+        });
+    }
+
+    // Initialize category search
+    const categorySearch = document.getElementById('category-search');
+    const categoriesContainer = document.getElementById('categories-container');
+
+    if (categorySearch && categoriesContainer) {
+        // Store original categories HTML
+        const originalCategoriesHTML = categoriesContainer.innerHTML;
+
+        categorySearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+
+            if (searchTerm === '') {
+                // Show all categories
+                categoriesContainer.innerHTML = originalCategoriesHTML;
+            } else {
+                // Filter categories
+                const categoryLabels = categoriesContainer.querySelectorAll('label');
+                categoryLabels.forEach(label => {
+                    const categoryName = label.textContent.toLowerCase();
+                    if (categoryName.includes(searchTerm)) {
+                        label.style.display = 'flex';
+                    } else {
+                        label.style.display = 'none';
+                    }
+                });
+            }
+        });
+    }
+}
+
+console.log('🔍 Book form script loaded');
+
+// Initialize everything when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 Initializing book form...');
+
+    // Initialize search functionality
+    initializeSearchableSelections();
+
+    // Debug: Check authors and categories
+    const authorCheckboxes = document.querySelectorAll('input[name="authors"]');
+    const categoryCheckboxes = document.querySelectorAll('input[name="categories"]');
+
+    console.log(`📝 Authors found: ${authorCheckboxes.length}`);
+    console.log(`📝 Categories found: ${categoryCheckboxes.length}`);
+
+    if (authorCheckboxes.length === 0) {
+        console.log('❌ No authors found - check database or form queryset');
+    }
+    if (categoryCheckboxes.length === 0) {
+        console.log('❌ No categories found - check database or form queryset');
+    }
+
+    // Prevent any form submission conflicts
+    const bookForm = document.getElementById('book-form');
+    if (bookForm) {
+        // Remove any existing event listeners that might interfere
+        bookForm.addEventListener('submit', function(e) {
+            console.log('🔍 Book form submit event detected');
+            // Allow the submission to proceed normally
+        });
+    }
+
+    // Prevent search forms from interfering
+    const searchForms = document.querySelectorAll('form:not(#book-form)');
+    searchForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            console.log('🔍 Search form submission detected, allowing...');
+        });
+    });
+
+    console.log('✅ Book form initialization complete');
+});
+</script>
+
+{% endblock %}

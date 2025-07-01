@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - LibraryPro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                    {% if is_overdue %}
+                    <i class="fas fa-exclamation-triangle text-red-600 mr-3"></i>
+                    {% else %}
+                    <i class="fas fa-clock text-yellow-600 mr-3"></i>
+                    {% endif %}
+                    {{ page_title }}
+                </h1>
+                <p class="text-gray-600 mt-2">{{ page_description }}</p>
+            </div>
+            <div class="flex space-x-4">
+                {% if is_overdue %}
+                <a href="{% url 'due_soon_loans' %}" class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                    <i class="fas fa-clock mr-2"></i>Due Soon
+                </a>
+                {% else %}
+                <a href="{% url 'overdue_loans' %}" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Overdue
+                </a>
+                {% endif %}
+                <a href="{% url 'loan_list' %}" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                    <i class="fas fa-list mr-2"></i>All Loans
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Banner -->
+    {% if is_overdue %}
+    <div class="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-red-800">Overdue Books Alert</h3>
+                <p class="text-red-700 mt-1">These books are past their due date and require immediate attention to prevent loss.</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <i class="fas fa-clock text-yellow-600 text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-yellow-800">Due Soon Reminder</h3>
+                <p class="text-yellow-700 mt-1">These books are due within the next 3 days. Consider sending reminders to borrowers.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Search and Filters -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        <form method="get" class="flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <input type="text" name="search" value="{{ search_query }}" 
+                       placeholder="Search by book title, student name..." 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200">
+                    <i class="fas fa-search mr-2"></i>Search
+                </button>
+                {% if search_query %}
+                <a href="{% if is_overdue %}{% url 'overdue_loans' %}{% else %}{% url 'due_soon_loans' %}{% endif %}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200">
+                    <i class="fas fa-times mr-2"></i>Clear
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 {% if is_overdue %}bg-red-100{% else %}bg-yellow-100{% endif %} rounded-lg flex items-center justify-center">
+                        <i class="fas {% if is_overdue %}fa-exclamation-triangle text-red-600{% else %}fa-clock text-yellow-600{% endif %} text-xl"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">{{ page_title }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ loans|length }}</p>
+                </div>
+            </div>
+        </div>
+        
+        {% if is_overdue %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Fines</p>
+                    <p class="text-2xl font-bold text-gray-900">${{ loans|length|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Loans List -->
+    {% if loans %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">{{ page_title }}</h2>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Borrower</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {% if is_overdue %}Days Overdue{% else %}Days Until Due{% endif %}
+                        </th>
+                        {% if is_overdue %}
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fine</th>
+                        {% endif %}
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for loan in loans %}
+                    <tr class="hover:bg-gray-50 transition-colors duration-200 {% if is_overdue and loan.days_overdue > 7 %}bg-red-50{% endif %}">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="w-12 h-16 bg-gray-200 rounded-lg flex items-center justify-center mr-4">
+                                    {% if loan.book.cover_image %}
+                                    <img src="{{ loan.book.cover_image.url }}" alt="{{ loan.book.title }}" class="w-12 h-16 object-cover rounded-lg">
+                                    {% else %}
+                                    <i class="fas fa-book text-gray-400"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="font-medium text-gray-900">{{ loan.book.title }}</div>
+                                    <div class="text-sm text-gray-500">{{ loan.book.isbn|default:"No ISBN" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-gray-900">{{ loan.borrower.get_full_name }}</div>
+                            <div class="text-sm text-gray-500">{{ loan.borrower.get_role_display }}</div>
+                            {% if loan.borrower.notification_email %}
+                            <div class="text-xs text-blue-600">
+                                <i class="fas fa-envelope mr-1"></i>Additional contact
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            {{ loan.issue_date|date:"M d, Y" }}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <div class="{% if is_overdue %}text-red-600 font-medium{% else %}text-gray-900{% endif %}">
+                                {{ loan.due_date|date:"M d, Y" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if is_overdue %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+                                {% if loan.days_overdue <= 3 %}bg-yellow-100 text-yellow-800
+                                {% elif loan.days_overdue <= 7 %}bg-orange-100 text-orange-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                <i class="fas fa-exclamation-triangle text-xs mr-1"></i>
+                                {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }}
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+                                {% if loan.days_until_due == 0 %}bg-red-100 text-red-800
+                                {% elif loan.days_until_due == 1 %}bg-orange-100 text-orange-800
+                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                <i class="fas fa-clock text-xs mr-1"></i>
+                                {{ loan.days_until_due }} day{{ loan.days_until_due|pluralize }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        {% if is_overdue %}
+                        <td class="px-6 py-4 text-sm font-medium text-red-600">
+                            ${{ loan.fine_amount|floatformat:2 }}
+                        </td>
+                        {% endif %}
+                        <td class="px-6 py-4 text-sm font-medium space-x-2">
+                            <a href="{% url 'loan_return' loan.id %}" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs transition-colors duration-200">
+                                <i class="fas fa-check mr-1"></i>Return
+                            </a>
+                            {% if not is_overdue %}
+                            <a href="{% url 'loan_renew' loan.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-xs transition-colors duration-200">
+                                <i class="fas fa-redo mr-1"></i>Renew
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex justify-center mt-8">
+        <nav class="flex space-x-2">
+            {% if page_obj.has_previous %}
+            <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" 
+               class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors duration-200">
+                First
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" 
+               class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors duration-200">
+                Previous
+            </a>
+            {% endif %}
+
+            <span class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" 
+               class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors duration-200">
+                Next
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" 
+               class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors duration-200">
+                Last
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- No Loans Found -->
+    <div class="text-center py-16">
+        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            {% if is_overdue %}
+            <i class="fas fa-exclamation-triangle text-4xl text-gray-400"></i>
+            {% else %}
+            <i class="fas fa-clock text-4xl text-gray-400"></i>
+            {% endif %}
+        </div>
+        <h3 class="text-xl font-medium text-gray-500 mb-2">
+            {% if is_overdue %}No overdue books found{% else %}No books due soon{% endif %}
+        </h3>
+        <p class="text-gray-400 mb-6">
+            {% if is_overdue %}Great! All books are returned on time.{% else %}All books have comfortable due dates.{% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

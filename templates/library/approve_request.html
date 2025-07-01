@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Approve Request - Library Management System{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'pending_requests' %}" class="text-blue-600 hover:text-blue-800">
+                <i class="fas fa-arrow-left text-lg"></i>
+            </a>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Approve Book Request</h1>
+                <p class="text-gray-600 mt-2">Review and approve this book request</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Details -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Request Details</h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Student Information -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Student Information</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-user text-blue-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">{{ loan.borrower.get_full_name }}</p>
+                                <p class="text-sm text-gray-500">{{ loan.borrower.username }}</p>
+                                {% if loan.borrower.enrollment_number %}
+                                <p class="text-xs text-blue-600">ID: {{ loan.borrower.enrollment_number }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            <p><strong>Role:</strong> {{ loan.borrower.get_role_display }}</p>
+                            <p><strong>Email:</strong> {{ loan.borrower.email }}</p>
+                            {% if loan.borrower.phone_number %}
+                            <p><strong>Phone:</strong> {{ loan.borrower.phone_number }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Book Information -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Book Information</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            {% if loan.book.cover_image %}
+                            <img src="{{ loan.book.cover_image.url }}" alt="{{ loan.book.title }}" class="w-16 h-20 object-cover rounded-lg mr-4">
+                            {% else %}
+                            <div class="w-16 h-20 bg-gray-200 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-book text-gray-400"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <p class="font-medium text-gray-900">{{ loan.book.title }}</p>
+                                {% if loan.book.subtitle %}
+                                <p class="text-sm text-gray-600">{{ loan.book.subtitle }}</p>
+                                {% endif %}
+                                <p class="text-sm text-gray-500">{{ loan.book.get_authors_display }}</p>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            <p><strong>ISBN:</strong> {{ loan.book.isbn }}</p>
+                            <p><strong>Publisher:</strong> {{ loan.book.publisher|default:"N/A" }}</p>
+                            <p><strong>Available Copies:</strong> 
+                                <span class="{% if loan.book.available_copies > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {{ loan.book.available_copies }}/{{ loan.book.total_copies }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Request Information -->
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Request Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Request Date</p>
+                        <p class="text-lg text-gray-900">{{ loan.issue_date|date:"M d, Y" }}</p>
+                        <p class="text-sm text-gray-500">{{ loan.issue_date|date:"g:i A" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Proposed Due Date</p>
+                        <p class="text-lg text-gray-900">{{ loan.due_date|date:"M d, Y" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Status</p>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
+                            <i class="fas fa-clock mr-1"></i>Pending Approval
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approval Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Approve Request</h2>
+        </div>
+        <div class="p-6">
+            {% if loan.book.available_copies > 0 %}
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-green-400 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-green-800">Book Available</h3>
+                        <p class="text-sm text-green-700 mt-1">This book is available for loan. You can approve this request.</p>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" id="approve-form" class="space-y-6">
+                {% csrf_token %}
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">Confirm Approval</h3>
+                        <p class="text-sm text-gray-600">This will issue the book to {{ loan.borrower.get_full_name }} and update the book availability.</p>
+                    </div>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button type="button" id="approve-submit-btn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm" onclick="handleApproveSubmit()">
+                        <i class="fas fa-check mr-2"></i><span id="approve-submit-text">Approve Request</span>
+                    </button>
+                    <a href="{% url 'pending_requests' %}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+            {% else %}
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-400 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Book Not Available</h3>
+                        <p class="text-sm text-red-700 mt-1">This book is currently not available for loan. All copies are already borrowed.</p>
+                        <div class="mt-4">
+                            <a href="{% url 'reject_request' loan.id %}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                                <i class="fas fa-times mr-2"></i>Reject Request
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Approve request form submission handler
+function handleApproveSubmit() {
+    console.log('🖱️ Approve submit button clicked!');
+
+    // Show confirmation dialog
+    const confirmed = confirm('Are you sure you want to approve this book request? This will issue the book to {{ loan.borrower.get_full_name }}.');
+    console.log('✅ User confirmed:', confirmed);
+
+    if (!confirmed) {
+        console.log('❌ User cancelled');
+        return false;
+    }
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('approve-submit-btn');
+    const submitText = document.getElementById('approve-submit-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        console.log('✅ Loading state applied');
+    }
+
+    console.log('🚀 Submitting approve form...');
+
+    // Submit the form directly
+    const form = document.getElementById('approve-form');
+    if (form) {
+        form.submit();
+    } else {
+        console.log('❌ Form not found');
+    }
+
+    return false;
+}
+
+console.log('🔍 Approve request page script loaded');
+</script>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cancel Request - Library Management System{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'student_dashboard' %}" class="text-blue-600 hover:text-blue-800">
+                <i class="fas fa-arrow-left text-lg"></i>
+            </a>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Cancel Book Request</h1>
+                <p class="text-gray-600 mt-2">Cancel your pending book request</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Details -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Request Details</h2>
+        </div>
+        <div class="p-6">
+            <div class="flex items-start space-x-6">
+                <!-- Book Cover -->
+                <div class="flex-shrink-0">
+                    {% if loan.book.cover_image %}
+                    <img src="{{ loan.book.cover_image.url }}" alt="{{ loan.book.title }}" class="w-24 h-32 object-cover rounded-lg shadow-sm">
+                    {% else %}
+                    <div class="w-24 h-32 bg-gray-200 rounded-lg flex items-center justify-center shadow-sm">
+                        <i class="fas fa-book text-gray-400 text-2xl"></i>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Book Information -->
+                <div class="flex-1">
+                    <h3 class="text-xl font-semibold text-gray-900">{{ loan.book.title }}</h3>
+                    {% if loan.book.subtitle %}
+                    <p class="text-lg text-gray-600 mt-1">{{ loan.book.subtitle }}</p>
+                    {% endif %}
+                    <p class="text-gray-500 mt-2">{{ loan.book.get_authors_display }}</p>
+                    
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">ISBN</p>
+                            <p class="text-gray-900">{{ loan.book.isbn }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Publisher</p>
+                            <p class="text-gray-900">{{ loan.book.publisher|default:"N/A" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Request Date</p>
+                            <p class="text-gray-900">{{ loan.issue_date|date:"M d, Y" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Status</p>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                <i class="fas fa-clock mr-1"></i>Pending Approval
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancellation Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Cancel Request</h2>
+        </div>
+        <div class="p-6">
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Confirm Cancellation</h3>
+                        <p class="text-sm text-yellow-700 mt-1">
+                            Are you sure you want to cancel your request for "{{ loan.book.title }}"? 
+                            This action cannot be undone, and you'll need to submit a new request if you change your mind.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" id="cancel-request-form" class="space-y-6">
+                {% csrf_token %}
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-900 mb-2">What happens when you cancel:</h4>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• Your request will be removed from the pending queue</li>
+                        <li>• The librarian will be notified of the cancellation</li>
+                        <li>• You can submit a new request for this book later if needed</li>
+                        <li>• This action will be logged in your account history</li>
+                    </ul>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button type="button" id="cancel-submit-btn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm" onclick="handleCancelSubmit()">
+                        <i class="fas fa-times mr-2"></i><span id="cancel-submit-text">Yes, Cancel Request</span>
+                    </button>
+                    <a href="{% url 'student_dashboard' %}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                        <i class="fas fa-arrow-left mr-2"></i>Keep Request
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Cancel request form submission handler
+function handleCancelSubmit() {
+    console.log('🖱️ Cancel request button clicked!');
+
+    // Show confirmation dialog
+    const confirmed = confirm('Are you sure you want to cancel your request for "{{ loan.book.title }}"? This action cannot be undone.');
+    console.log('✅ User confirmed:', confirmed);
+
+    if (!confirmed) {
+        console.log('❌ User cancelled');
+        return false;
+    }
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('cancel-submit-btn');
+    const submitText = document.getElementById('cancel-submit-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        console.log('✅ Loading state applied');
+    }
+
+    console.log('🚀 Submitting cancel request form...');
+
+    // Find the specific cancel request form by ID
+    const cancelForm = document.getElementById('cancel-request-form');
+    if (cancelForm) {
+        console.log('✅ Cancel request form found, submitting...');
+        cancelForm.submit();
+    } else {
+        console.log('❌ Cancel request form not found');
+        alert('Error: Could not find the cancel request form to submit.');
+        // Restore button state
+        if (submitBtn && submitText) {
+            submitBtn.disabled = false;
+            submitText.innerHTML = '<i class="fas fa-times mr-2"></i>Yes, Cancel Request';
+        }
+    }
+
+    return false;
+}
+
+console.log('🔧 Cancel request script loaded');
+</script>
+{% endblock %}

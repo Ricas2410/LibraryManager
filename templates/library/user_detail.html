@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ user_obj.get_full_name|default:user_obj.username }} - User Details{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">User Details</h1>
+            <p class="text-gray-600 mt-1">View and manage user information</p>
+        </div>
+        <div class="flex space-x-3">
+            {% if user.can_manage_users %}
+            <a href="{% url 'user_edit' user_obj.id %}"
+               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-edit mr-2"></i>Edit User
+            </a>
+            {% endif %}
+            <a href="{% url 'user_list' %}" 
+               class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Users
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- User Profile Card -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-2xl shadow-xl p-6">
+                <div class="text-center">
+                    <div class="w-24 h-24 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
+                        {% if user_obj.profile_picture %}
+                        <img src="{{ user_obj.profile_picture.url }}" alt="Profile" class="w-24 h-24 rounded-full object-cover">
+                        {% else %}
+                        <i class="fas fa-user text-3xl text-gray-400"></i>
+                        {% endif %}
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900">{{ user_obj.get_full_name|default:user_obj.username }}</h2>
+                    <p class="text-gray-600">{{ user_obj.get_role_display }}</p>
+                    <div class="mt-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                            {% if user_obj.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                            {% if user_obj.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-6 space-y-4">
+                    <div class="flex items-center text-sm">
+                        <i class="fas fa-envelope text-gray-400 w-5"></i>
+                        <span class="ml-3 text-gray-900">{{ user_obj.email }}</span>
+                    </div>
+                    {% if user_obj.phone_number %}
+                    <div class="flex items-center text-sm">
+                        <i class="fas fa-phone text-gray-400 w-5"></i>
+                        <span class="ml-3 text-gray-900">{{ user_obj.phone_number }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex items-center text-sm">
+                        <i class="fas fa-calendar text-gray-400 w-5"></i>
+                        <span class="ml-3 text-gray-900">Joined {{ user_obj.date_joined|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Information -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Personal Information -->
+            <div class="bg-white rounded-2xl shadow-xl p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">First Name</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.first_name|default:"Not provided" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Last Name</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.last_name|default:"Not provided" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Username</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.username }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Email</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.email }}</p>
+                    </div>
+                    {% if user_obj.phone_number %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Phone Number</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.phone_number }}</p>
+                    </div>
+                    {% endif %}
+                    {% if user_obj.address %}
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-500">Address</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.address }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Academic Information -->
+            {% if user_obj.student_id or user_obj.department or user_obj.year_of_study %}
+            <div class="bg-white rounded-2xl shadow-xl p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Academic Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% if user_obj.student_id %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Student ID</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.student_id }}</p>
+                    </div>
+                    {% endif %}
+                    {% if user_obj.department %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Department</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.department }}</p>
+                    </div>
+                    {% endif %}
+                    {% if user_obj.year_of_study %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Year of Study</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.year_of_study }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Account Status -->
+            <div class="bg-white rounded-2xl shadow-xl p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Account Status</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Role</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.get_role_display }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Status</label>
+                        <p class="mt-1">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if user_obj.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {% if user_obj.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Date Joined</label>
+                        <p class="mt-1 text-sm text-gray-900">{{ user_obj.date_joined|date:"F d, Y" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Last Login</label>
+                        <p class="mt-1 text-sm text-gray-900">
+                            {% if user_obj.last_login %}
+                                {{ user_obj.last_login|date:"F d, Y g:i A" }}
+                            {% else %}
+                                Never
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

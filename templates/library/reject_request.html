@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reject Request - Library Management System{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'pending_requests' %}" class="text-blue-600 hover:text-blue-800">
+                <i class="fas fa-arrow-left text-lg"></i>
+            </a>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Reject Book Request</h1>
+                <p class="text-gray-600 mt-2">Provide a reason for rejecting this request</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Details -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Request Details</h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Student Information -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Student Information</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-user text-blue-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">{{ loan.borrower.get_full_name }}</p>
+                                <p class="text-sm text-gray-500">{{ loan.borrower.username }}</p>
+                                {% if loan.borrower.enrollment_number %}
+                                <p class="text-xs text-blue-600">ID: {{ loan.borrower.enrollment_number }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            <p><strong>Role:</strong> {{ loan.borrower.get_role_display }}</p>
+                            <p><strong>Email:</strong> {{ loan.borrower.email }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Book Information -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Book Information</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            {% if loan.book.cover_image %}
+                            <img src="{{ loan.book.cover_image.url }}" alt="{{ loan.book.title }}" class="w-16 h-20 object-cover rounded-lg mr-4">
+                            {% else %}
+                            <div class="w-16 h-20 bg-gray-200 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-book text-gray-400"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <p class="font-medium text-gray-900">{{ loan.book.title }}</p>
+                                {% if loan.book.subtitle %}
+                                <p class="text-sm text-gray-600">{{ loan.book.subtitle }}</p>
+                                {% endif %}
+                                <p class="text-sm text-gray-500">{{ loan.book.get_authors_display }}</p>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            <p><strong>ISBN:</strong> {{ loan.book.isbn }}</p>
+                            <p><strong>Available Copies:</strong> 
+                                <span class="{% if loan.book.available_copies > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {{ loan.book.available_copies }}/{{ loan.book.total_copies }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejection Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Reject Request</h2>
+        </div>
+        <div class="p-6">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-400 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Rejecting Request</h3>
+                        <p class="text-sm text-red-700 mt-1">This action will permanently reject the book request. The student will be notified.</p>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                <div>
+                    <label for="reason" class="block text-sm font-medium text-gray-700 mb-2">
+                        Reason for Rejection <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute top-3 left-3 pointer-events-none">
+                            <i class="fas fa-comment-alt text-gray-400 text-sm"></i>
+                        </div>
+                        <textarea name="reason" id="reason" rows="4" required
+                                  class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                                  placeholder="Please provide a clear reason for rejecting this request..."></textarea>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">This reason will be logged and may be shared with the student.</p>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-900 mb-2">Common Rejection Reasons:</h4>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• Book is currently unavailable (all copies borrowed)</li>
+                        <li>• Student has reached maximum borrowing limit</li>
+                        <li>• Student has overdue books that need to be returned first</li>
+                        <li>• Book is reserved for academic purposes only</li>
+                        <li>• Technical or administrative issues</li>
+                    </ul>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button type="button" id="reject-submit-btn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm" onclick="handleRejectSubmit()">
+                        <i class="fas fa-times mr-2"></i><span id="reject-submit-text">Reject Request</span>
+                    </button>
+                    <a href="{% url 'pending_requests' %}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Requests
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Reject request form submission handler
+function handleRejectSubmit() {
+    console.log('🖱️ Reject submit button clicked!');
+
+    // Basic validation for reason field
+    const reasonInput = document.querySelector('textarea[name="reason"]');
+    if (!reasonInput || !reasonInput.value.trim()) {
+        alert('Please provide a reason for rejecting this request.');
+        return false;
+    }
+
+    // Show confirmation dialog
+    const confirmed = confirm('Are you sure you want to reject this book request? This action cannot be undone.');
+    console.log('✅ User confirmed:', confirmed);
+
+    if (!confirmed) {
+        console.log('❌ User cancelled');
+        return false;
+    }
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('reject-submit-btn');
+    const submitText = document.getElementById('reject-submit-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        console.log('✅ Loading state applied');
+    }
+
+    console.log('🚀 Submitting reject form...');
+
+    // Submit the form directly
+    const form = document.querySelector('form');
+    if (form) {
+        form.submit();
+    } else {
+        console.log('❌ Form not found');
+    }
+
+    return false;
+}
+
+console.log('🔍 Reject request page script loaded');
+</script>
+{% endblock %}

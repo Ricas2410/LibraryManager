@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load library_extras %}
+
+{% block title %}Library Settings - LibraryPro{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Library Settings</h1>
+            <p class="mt-1 text-sm text-gray-500">Configure library policies, contact information, and system settings</p>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Library Information -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Library Information</h3>
+                <p class="mt-1 text-sm text-gray-500">Basic information about your library</p>
+            </div>
+            
+            <div class="px-6 py-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Library Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text"
+                               name="library_name"
+                               value="{{ form.library_name.value|default:'School Library' }}"
+                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                               placeholder="Enter library name"
+                               required>
+                        {% if form.library_name.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.library_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Library Address</label>
+                        <textarea name="library_address"
+                                  rows="3"
+                                  class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                  placeholder="Enter library address">{{ form.library_address.value|default:'Library Address' }}</textarea>
+                        {% if form.library_address.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.library_address.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                        <input type="tel"
+                               name="library_phone"
+                               value="{{ form.library_phone.value|default:'+1 (555) 123-4567' }}"
+                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                               placeholder="Enter phone number">
+                        {% if form.library_phone.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.library_phone.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input type="email"
+                               name="library_email"
+                               value="{{ form.library_email.value|default:'library@school.edu' }}"
+                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                               placeholder="Enter email address">
+                        {% if form.library_email.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.library_email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Library Logo</label>
+                        {{ form.logo }}
+                        {% if form.logo.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.logo.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">Upload a logo for your library (optional)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loan Policies -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Loan Policies</h3>
+                <p class="mt-1 text-sm text-gray-500">Configure borrowing rules and limits</p>
+            </div>
+            
+            <div class="px-6 py-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Default Loan Period (Days) <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number"
+                               name="default_loan_period"
+                               value="{{ form.default_loan_period.value|default:'14' }}"
+                               min="1" max="365"
+                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                               placeholder="14"
+                               required>
+                        {% if form.default_loan_period.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.default_loan_period.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">How many days books can be borrowed</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum Renewals <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number"
+                               name="max_renewals"
+                               value="{{ form.max_renewals.value|default:'3' }}"
+                               min="0" max="10"
+                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                               placeholder="3"
+                               required>
+                        {% if form.max_renewals.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.max_renewals.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">How many times a loan can be renewed</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Max Books Per User <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number"
+                               name="max_books_per_user"
+                               value="{{ form.max_books_per_user.value|default:'5' }}"
+                               min="1" max="50"
+                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                               placeholder="5"
+                               required>
+                        {% if form.max_books_per_user.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.max_books_per_user.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">Maximum books a user can borrow</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fine Policies -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Fine Policies</h3>
+                <p class="mt-1 text-sm text-gray-500">Configure overdue fines and penalties</p>
+            </div>
+            
+            <div class="px-6 py-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Daily Fine Rate ($) <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
+                                <span class="text-gray-500 text-sm font-medium">$</span>
+                            </div>
+                            <input type="number" name="daily_fine_rate" value="{{ form.daily_fine_rate.value|default:'1.00' }}"
+                                   step="0.01" min="0"
+                                   class="block w-full pr-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   style="padding-left: 2.5rem;">
+                        </div>
+                        {% if form.daily_fine_rate.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.daily_fine_rate.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">Fine charged per day for overdue books</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum Fine Amount ($) <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
+                                <span class="text-gray-500 text-sm font-medium">$</span>
+                            </div>
+                            <input type="number" name="max_fine_amount" value="{{ form.max_fine_amount.value|default:'50.00' }}"
+                                   step="0.01" min="0"
+                                   class="block w-full pr-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                                   style="padding-left: 2.5rem;">
+                        </div>
+                        {% if form.max_fine_amount.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.max_fine_amount.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">Maximum fine that can be charged</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reservation Policies -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Reservation Policies</h3>
+                <p class="mt-1 text-sm text-gray-500">Configure book reservation settings</p>
+            </div>
+            
+            <div class="px-6 py-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Reservation Expiry (Days) <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number"
+                               name="reservation_expiry_days"
+                               value="{{ form.reservation_expiry_days.value|default:'7' }}"
+                               min="1" max="30"
+                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                               placeholder="7"
+                               required>
+                        {% if form.reservation_expiry_days.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.reservation_expiry_days.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">Days before a reservation expires</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Max Reservations Per User <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number"
+                               name="max_reservations_per_user"
+                               value="{{ form.max_reservations_per_user.value|default:'3' }}"
+                               min="1" max="20"
+                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                               placeholder="3"
+                               required>
+                        {% if form.max_reservations_per_user.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.max_reservations_per_user.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">Maximum active reservations per user</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Settings -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">System Settings</h3>
+                <p class="mt-1 text-sm text-gray-500">General system configuration</p>
+            </div>
+            
+            <div class="px-6 py-6">
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_active" id="is_active" 
+                           {% if form.is_active.value %}checked{% endif %}
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="is_active" class="ml-2 block text-sm text-gray-900">
+                        Library System Active
+                    </label>
+                </div>
+                <p class="mt-1 text-sm text-gray-500">When disabled, the library system will be in maintenance mode</p>
+                {% if form.is_active.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Email Notification Settings -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Email Notifications</h3>
+                <p class="mt-1 text-sm text-gray-500">Configure automatic email notifications</p>
+            </div>
+            
+            <div class="px-6 py-6">
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="due_date_reminders" name="due_date_reminders" checked
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="due_date_reminders" class="ml-2 block text-sm text-gray-900">
+                            Send due date reminders (3 days before due)
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" id="overdue_notifications" name="overdue_notifications" checked
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="overdue_notifications" class="ml-2 block text-sm text-gray-900">
+                            Send overdue notifications
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" id="reservation_notifications" name="reservation_notifications" checked
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="reservation_notifications" class="ml-2 block text-sm text-gray-900">
+                            Send reservation availability notifications
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex justify-end space-x-3">
+            <button type="button" onclick="resetForm()" 
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                Reset
+            </button>
+            <button type="submit" 
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                <i class="fas fa-save mr-2"></i>
+                Save Settings
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function resetForm() {
+    if (confirm('Are you sure you want to reset all settings to their default values?')) {
+        document.querySelector('form').reset();
+    }
+}
+</script>
+{% endblock %}

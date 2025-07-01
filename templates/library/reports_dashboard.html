@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% load library_extras %}
+
+{% block title %}Reports & Analytics - LibraryPro{% endblock %}
+
+{% block content %}
+<div class="space-y-8 animate-fade-in">
+    <!-- Header -->
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+        <div>
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Reports & Analytics</h1>
+            <p class="text-gray-600">Comprehensive insights into library operations and usage</p>
+        </div>
+        <div class="mt-4 lg:mt-0 flex space-x-3">
+            <a href="{% url 'export_loans_report' %}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center space-x-2 shadow-lg transition-all duration-300">
+                <i class="fas fa-file-excel"></i>
+                <span>Export Loans</span>
+            </a>
+            <a href="{% url 'export_books_report' %}" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center space-x-2 shadow-lg transition-all duration-300">
+                <i class="fas fa-file-pdf"></i>
+                <span>Export Books</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <!-- Total Books -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Total Books</p>
+                    <p class="text-3xl font-bold text-blue-600">{{ stats.total_books }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-book text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Users -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Active Users</p>
+                    <p class="text-3xl font-bold text-green-600">{{ stats.total_users }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-users text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Loans -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Active Loans</p>
+                    <p class="text-3xl font-bold text-orange-600">{{ stats.active_loans }}</p>
+                </div>
+                <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-hand-holding text-orange-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overdue Loans -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Overdue</p>
+                    <p class="text-3xl font-bold text-red-600">{{ stats.overdue_loans }}</p>
+                </div>
+                <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reservations -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Reservations</p>
+                    <p class="text-3xl font-bold text-purple-600">{{ stats.total_reservations }}</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-bookmark text-purple-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Analytics -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Monthly Loan Trends -->
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-chart-line text-blue-600 mr-3"></i>
+                Monthly Loan Trends
+            </h3>
+            <div class="h-64 flex items-end justify-between space-x-2">
+                {% for month_data in monthly_loans %}
+                <div class="flex flex-col items-center flex-1">
+                    <div class="w-full bg-blue-200 rounded-t-lg relative" style="height: {{ month_data.loans|default:1 }}px; max-height: 200px; min-height: 20px;">
+                        <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-semibold text-gray-600">
+                            {{ month_data.loans }}
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-2 transform -rotate-45 origin-center">
+                        {{ month_data.month }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Category Distribution -->
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-chart-pie text-green-600 mr-3"></i>
+                Category Performance
+            </h3>
+            <div class="space-y-4">
+                {% for category in category_stats|slice:":6" %}
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-4 h-4 rounded-full" style="background-color: {{ forloop.counter0|chart_color }};"></div>
+                        <span class="font-medium text-gray-700">{{ category.name }}</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-500">{{ category.book_count }} books</span>
+                        <span class="text-sm font-semibold text-gray-700">{{ category.loan_count }} loans</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Books and Active Users -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Most Popular Books -->
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-star text-yellow-600 mr-3"></i>
+                Most Popular Books
+            </h3>
+            <div class="space-y-4">
+                {% for book in popular_books %}
+                <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200">
+                    <div class="w-12 h-16 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                        {% if book.cover_image %}
+                        <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="w-12 h-16 object-cover rounded-lg">
+                        {% else %}
+                        <i class="fas fa-book text-gray-400"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-semibold text-gray-800 truncate">{{ book.title }}</h4>
+                        <p class="text-sm text-gray-500 truncate">{{ book.get_authors_display }}</p>
+                        <div class="flex items-center mt-1">
+                            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                {{ book.loan_count }} loan{{ book.loan_count|pluralize }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold text-blue-600">{{ forloop.counter }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-book text-4xl mb-4"></i>
+                    <p>No loan data available</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Most Active Users -->
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-trophy text-orange-600 mr-3"></i>
+                Most Active Readers
+            </h3>
+            <div class="space-y-4">
+                {% for user in active_users %}
+                <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200">
+                    <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                        {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}" class="w-12 h-12 rounded-full object-cover">
+                        {% else %}
+                        <i class="fas fa-user text-gray-400"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-semibold text-gray-800 truncate">{{ user.get_full_name }}</h4>
+                        <p class="text-sm text-gray-500">{{ user.get_role_display }}</p>
+                        <div class="flex items-center mt-1">
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                {{ user.loan_count }} loan{{ user.loan_count|pluralize }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold text-orange-600">{{ forloop.counter }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-users text-4xl mb-4"></i>
+                    <p>No user activity data</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Period Info -->
+    <div class="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+        <div class="flex items-center">
+            <i class="fas fa-info-circle text-blue-600 text-xl mr-3"></i>
+            <div>
+                <h4 class="font-semibold text-blue-800">Report Period</h4>
+                <p class="text-blue-700 text-sm">
+                    Data shown for the period from {{ start_date|date:"F d, Y" }} to {{ end_date|date:"F d, Y" }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Add some interactivity to charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate chart bars
+    const chartBars = document.querySelectorAll('.bg-blue-200');
+    chartBars.forEach((bar, index) => {
+        setTimeout(() => {
+            bar.style.transform = 'scaleY(0)';
+            bar.style.transformOrigin = 'bottom';
+            bar.style.transition = 'transform 0.8s ease-out';
+            
+            setTimeout(() => {
+                bar.style.transform = 'scaleY(1)';
+            }, 100);
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}

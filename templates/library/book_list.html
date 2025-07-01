@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+
+{% block title %}Books - Library Management System{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Books</h1>
+            <p class="text-gray-600 mt-1">Manage your library collection</p>
+        </div>
+        <div class="flex items-center space-x-4">
+            <!-- View Toggle -->
+            <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                <button onclick="toggleView('table')" id="table-view-btn"
+                        class="px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-white text-gray-900 shadow-sm">
+                    <i class="fas fa-list mr-2"></i>Table
+                </button>
+                <button onclick="toggleView('grid')" id="grid-view-btn"
+                        class="px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-500 hover:text-gray-900">
+                    <i class="fas fa-th-large mr-2"></i>Grid
+                </button>
+            </div>
+            {% if user.can_manage_books %}
+            <a href="{% url 'book_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-plus mr-2"></i>Add Book
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="bg-white rounded-2xl shadow-xl p-6">
+        <div class="mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Search & Filter Books</h3>
+            <p class="text-sm text-gray-600">Find books by title, author, ISBN, or filter by category and status</p>
+        </div>
+        <form method="get" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Search Books</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
+                            <i class="fas fa-search text-gray-400 text-sm"></i>
+                        </div>
+                        <input type="text"
+                               name="query"
+                               value="{{ request.GET.query|default:'' }}"
+                               placeholder="Search by title, author, ISBN..."
+                               class="w-full pr-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                               style="padding-left: 3rem;">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select name="category"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
+                        <option value="">All Categories</option>
+                        <option value="fiction" {% if request.GET.category == 'fiction' %}selected{% endif %}>Fiction</option>
+                        <option value="non-fiction" {% if request.GET.category == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
+                        <option value="science" {% if request.GET.category == 'science' %}selected{% endif %}>Science</option>
+                        <option value="technology" {% if request.GET.category == 'technology' %}selected{% endif %}>Technology</option>
+                        <option value="history" {% if request.GET.category == 'history' %}selected{% endif %}>History</option>
+                        <option value="biography" {% if request.GET.category == 'biography' %}selected{% endif %}>Biography</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select name="status"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
+                        <option value="">All Status</option>
+                        <option value="available" {% if request.GET.status == 'available' %}selected{% endif %}>Available</option>
+                        <option value="borrowed" {% if request.GET.status == 'borrowed' %}selected{% endif %}>Borrowed</option>
+                        <option value="reserved" {% if request.GET.status == 'reserved' %}selected{% endif %}>Reserved</option>
+                        <option value="maintenance" {% if request.GET.status == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Section</label>
+                    <input type="text"
+                           name="section"
+                           value="{{ request.GET.section|default:'' }}"
+                           placeholder="Enter section..."
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
+                </div>
+            </div>
+            <div class="flex space-x-3 pt-2">
+                <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                    <i class="fas fa-search mr-2"></i>Search
+                </button>
+                <a href="{% url 'book_list' %}"
+                   class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                    <i class="fas fa-times mr-2"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Books Views -->
+    {% if books %}
+
+    <!-- Table View -->
+    <div id="table-view" class="hidden bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Author(s)</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ISBN</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Availability</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for book in books %}
+                    <tr class="hover:bg-gray-50 transition-colors duration-200">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-16 w-12">
+                                    {% if book.cover_image %}
+                                    <img class="h-16 w-12 object-cover rounded" src="{{ book.cover_image.url }}" alt="">
+                                    {% else %}
+                                    <div class="h-16 w-12 bg-gray-200 rounded flex items-center justify-center">
+                                        <i class="fas fa-book text-gray-400"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900 max-w-xs truncate">
+                                        {{ book.title }}
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        Published {{ book.publication_year|default:"N/A" }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ book.get_authors_display|truncatechars:30 }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ book.isbn }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ book.category|default:"Uncategorized" }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div class="text-sm text-gray-900">{{ book.section|default:"N/A" }}</div>
+                            <div class="text-sm text-gray-500">{{ book.shelf_location|default:"N/A" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if book.status == 'available' %}bg-green-100 text-green-800
+                                {% elif book.status == 'borrowed' %}bg-yellow-100 text-yellow-800
+                                {% elif book.status == 'reserved' %}bg-blue-100 text-blue-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ book.get_status_display }}
+                            </span>
+                            <div class="text-xs text-gray-500 mt-1">
+                                {{ book.available_copies }}/{{ book.total_copies }} available
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'book_detail' book.id %}"
+                                   class="text-blue-600 hover:text-blue-900 transition-colors duration-200"
+                                   title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if user.can_manage_books %}
+                                <a href="{% url 'book_edit' book.id %}"
+                                   class="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                                   title="Edit Book">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                {% if book.status == 'available' and user.can_manage_books %}
+                                <a href="{% url 'loan_create' %}?book={{ book.id }}"
+                                   class="text-green-600 hover:text-green-900 transition-colors duration-200"
+                                   title="Issue Loan">
+                                    <i class="fas fa-hand-holding"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Grid View -->
+    <div id="grid-view" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
+        {% for book in books %}
+        <div class="bg-white rounded-lg shadow hover:shadow-lg transition duration-200">
+            <div class="p-2 sm:p-3 md:p-4">
+                <!-- Book Cover -->
+                <div class="aspect-w-3 aspect-h-4 mb-2 sm:mb-3 md:mb-4">
+                    {% if book.cover_image %}
+                    <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="w-full h-32 sm:h-40 md:h-48 object-cover rounded">
+                    {% else %}
+                    <div class="w-full h-32 sm:h-40 md:h-48 bg-gray-200 rounded flex items-center justify-center">
+                        <i class="fas fa-book text-2xl sm:text-3xl md:text-4xl text-gray-400"></i>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Book Info -->
+                <div class="space-y-1 sm:space-y-2">
+                    <h3 class="font-bold text-sm sm:text-base md:text-lg text-gray-800 line-clamp-2 leading-tight">{{ book.title }}</h3>
+                    <p class="text-xs sm:text-sm text-gray-600 truncate">by {{ book.get_authors_display }}</p>
+
+                    <!-- Status Badge -->
+                    <div class="flex items-center justify-between">
+                        <span class="inline-block px-1.5 py-0.5 sm:px-2 sm:py-1 text-xs font-semibold rounded
+                            {% if book.status == 'available' %}bg-green-100 text-green-800
+                            {% elif book.status == 'borrowed' %}bg-yellow-100 text-yellow-800
+                            {% elif book.status == 'reserved' %}bg-blue-100 text-blue-800
+                            {% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ book.get_status_display }}
+                        </span>
+                        <span class="text-xs text-gray-500 hidden sm:inline">{{ book.available_copies }}/{{ book.total_copies }}</span>
+                    </div>
+
+                    <!-- Location - Hidden on mobile -->
+                    <p class="text-xs text-gray-500 hidden md:block">
+                        <i class="fas fa-map-marker-alt mr-1"></i>{{ book.section }} - {{ book.shelf_location }}
+                    </p>
+
+                    <!-- ISBN - Hidden on mobile -->
+                    <p class="text-xs text-gray-500 hidden lg:block">ISBN: {{ book.isbn }}</p>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-2 sm:mt-3 md:mt-4 flex space-x-1 sm:space-x-2">
+                    <a href="{% url 'book_detail' book.id %}" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-1.5 sm:py-2 rounded text-xs sm:text-sm">
+                        <span class="hidden sm:inline">View Details</span>
+                        <span class="sm:hidden">View</span>
+                    </a>
+                    {% if user.can_manage_books %}
+                    <a href="{% url 'book_edit' book.id %}" class="bg-gray-500 hover:bg-gray-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex justify-center">
+        <nav class="flex space-x-2">
+            {% if page_obj.has_previous %}
+            <a href="?page=1{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.section %}&section={{ request.GET.section }}{% endif %}" 
+               class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-500 hover:bg-gray-50">
+                First
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.section %}&section={{ request.GET.section }}{% endif %}" 
+               class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-500 hover:bg-gray-50">
+                Previous
+            </a>
+            {% endif %}
+
+            <span class="px-3 py-2 bg-blue-600 text-white rounded-md text-sm">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.section %}&section={{ request.GET.section }}{% endif %}" 
+               class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-500 hover:bg-gray-50">
+                Next
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.section %}&section={{ request.GET.section }}{% endif %}" 
+               class="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-500 hover:bg-gray-50">
+                Last
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- No Books Found -->
+    <div class="text-center py-12">
+        <i class="fas fa-book text-6xl text-gray-300 mb-4"></i>
+        <h3 class="text-xl font-medium text-gray-500 mb-2">No books found</h3>
+        <p class="text-gray-400">Try adjusting your search criteria or add some books to the library.</p>
+        {% if user.can_manage_books %}
+        <a href="{% url 'book_add' %}" class="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+            <i class="fas fa-plus mr-2"></i>Add First Book
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleView(viewType) {
+    const tableView = document.getElementById('table-view');
+    const gridView = document.getElementById('grid-view');
+    const tableBtn = document.getElementById('table-view-btn');
+    const gridBtn = document.getElementById('grid-view-btn');
+
+    if (viewType === 'table') {
+        tableView.classList.remove('hidden');
+        gridView.classList.add('hidden');
+        tableBtn.classList.add('bg-white', 'text-gray-900', 'shadow-sm');
+        tableBtn.classList.remove('text-gray-500');
+        gridBtn.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
+        gridBtn.classList.add('text-gray-500');
+    } else {
+        tableView.classList.add('hidden');
+        gridView.classList.remove('hidden');
+        gridBtn.classList.add('bg-white', 'text-gray-900', 'shadow-sm');
+        gridBtn.classList.remove('text-gray-500');
+        tableBtn.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
+        tableBtn.classList.add('text-gray-500');
+    }
+
+    // Save preference to localStorage
+    localStorage.setItem('bookViewPreference', viewType);
+}
+
+// Load saved preference on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('bookViewPreference') || 'grid';
+    toggleView(savedView);
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Request Book - {{ book.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <nav class="flex" aria-label="Breadcrumb">
+            <ol class="flex items-center space-x-4">
+                <li>
+                    <a href="{% url 'home' %}" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-home"></i>
+                    </a>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                        <a href="{% url 'book_list' %}" class="text-gray-500 hover:text-gray-700">Books</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                        <a href="{% url 'book_detail' book.id %}" class="text-gray-500 hover:text-gray-700">{{ book.title|truncatechars:30 }}</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                        <span class="text-gray-900 font-medium">Request Book</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-blue-50">
+            <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-hand-holding mr-3 text-blue-600"></i>
+                Request to Borrow Book
+            </h1>
+            <p class="text-gray-600 mt-2">Confirm your request to borrow this book</p>
+        </div>
+
+        <div class="p-6">
+            <!-- Book Information -->
+            <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                <div class="flex items-start space-x-6">
+                    <div class="flex-shrink-0">
+                        {% if book.cover_image %}
+                            <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="w-32 h-40 object-cover rounded-lg shadow-md">
+                        {% else %}
+                            <div class="w-32 h-40 bg-gray-200 rounded-lg flex items-center justify-center shadow-md">
+                                <i class="fas fa-book text-gray-400 text-3xl"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ book.title }}</h2>
+                        {% if book.subtitle %}
+                            <p class="text-lg text-gray-600 mb-3">{{ book.subtitle }}</p>
+                        {% endif %}
+                        
+                        <div class="space-y-2">
+                            <p class="text-gray-700">
+                                <span class="font-medium">Author(s):</span>
+                                {% for author in book.authors.all %}
+                                    {{ author.first_name }} {{ author.last_name }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                            
+                            {% if book.publisher %}
+                            <p class="text-gray-700">
+                                <span class="font-medium">Publisher:</span> {{ book.publisher.name }}
+                            </p>
+                            {% endif %}
+                            
+                            <p class="text-gray-700">
+                                <span class="font-medium">ISBN:</span> {{ book.isbn }}
+                            </p>
+                            
+                            <p class="text-gray-700">
+                                <span class="font-medium">Publication Date:</span> {{ book.publication_date|date:"Y" }}
+                            </p>
+                            
+                            <p class="text-gray-700">
+                                <span class="font-medium">Available Copies:</span> 
+                                <span class="text-green-600 font-semibold">{{ book.available_copies }} of {{ book.total_copies }}</span>
+                            </p>
+                            
+                            {% if book.section %}
+                            <p class="text-gray-700">
+                                <span class="font-medium">Location:</span> {{ book.section }}
+                                {% if book.shelf_location %} - {{ book.shelf_location }}{% endif %}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loan Information -->
+            <div class="bg-blue-50 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-info-circle mr-2 text-blue-600"></i>
+                    Loan Information
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Borrower</p>
+                        <p class="text-gray-900">{{ user.get_full_name }}</p>
+                        <p class="text-sm text-gray-600">{{ user.email }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Loan Period</p>
+                        <p class="text-gray-900">14 days (standard)</p>
+                        <p class="text-sm text-gray-600">Can be renewed if no reservations</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terms and Conditions -->
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <h4 class="text-sm font-semibold text-yellow-800 mb-2 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Terms and Conditions
+                </h4>
+                <ul class="text-sm text-yellow-700 space-y-1">
+                    <li>• You are responsible for the book until it is returned</li>
+                    <li>• Late returns may incur daily fines</li>
+                    <li>• Lost or damaged books must be replaced or paid for</li>
+                    <li>• Books must be returned in the same condition as borrowed</li>
+                    <li>• Renewal is subject to availability and no pending reservations</li>
+                </ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <form method="post" id="request-form" class="flex items-center justify-between" data-enhanced="true" data-feedback-added="true">
+                {% csrf_token %}
+                <a href="{% url 'book_detail' book.id %}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                    <i class="fas fa-arrow-left mr-2"></i>Cancel
+                </a>
+
+                <button type="button" id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm" data-feedback-added="true" onclick="handleSubmit()">
+                    <i class="fas fa-check mr-2"></i><span id="submit-text">Confirm Borrow Request</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <i class="fas fa-question-circle mr-2 text-gray-600"></i>
+            Need Help?
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h4 class="font-medium text-gray-900 mb-2">Library Hours</h4>
+                <p class="text-sm text-gray-600">
+                    Monday - Friday: 8:00 AM - 6:00 PM<br>
+                    Saturday: 9:00 AM - 4:00 PM<br>
+                    Sunday: Closed
+                </p>
+            </div>
+            <div>
+                <h4 class="font-medium text-gray-900 mb-2">Contact Information</h4>
+                <p class="text-sm text-gray-600">
+                    Email: library@school.edu<br>
+                    Phone: (555) 123-4567<br>
+                    Location: Main Building, 2nd Floor
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Simple, direct form submission function
+function handleSubmit() {
+    console.log('🖱️ Submit button clicked!');
+
+    // Show confirmation dialog
+    const confirmed = confirm('Are you sure you want to borrow "{{ book.title }}"? You will be responsible for returning it within 14 days.');
+    console.log('✅ User confirmed:', confirmed);
+
+    if (!confirmed) {
+        console.log('❌ User cancelled');
+        return false;
+    }
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        console.log('✅ Loading state applied');
+    }
+
+    console.log('🚀 Submitting form...');
+
+    // Submit the form directly
+    const form = document.getElementById('request-form');
+    if (form) {
+        form.submit();
+    } else {
+        console.log('❌ Form not found');
+    }
+
+    return false;
+}
+
+// Debug: Log when page loads
+console.log('🔍 Request book page script loaded');
+</script>
+{% endblock %}

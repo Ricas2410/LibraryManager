@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+
+{% block title %}Return Book - LibraryPro{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto animate-fade-in">
+    <!-- Header -->
+    <div class="mb-8 text-center">
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">Return Book</h1>
+        <p class="text-gray-600">Confirm the return of this borrowed book</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- Confirmation Header -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 px-8 py-6 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                <i class="fas fa-undo text-green-600 mr-3"></i>
+                Book Return Confirmation
+            </h2>
+        </div>
+
+        <!-- Loan Details -->
+        <div class="p-8">
+            <div class="bg-gray-50 rounded-2xl p-6 mb-8">
+                <div class="flex items-start space-x-6">
+                    <!-- Book Cover -->
+                    <div class="flex-shrink-0">
+                        <div class="w-20 h-28 bg-gray-200 rounded-lg flex items-center justify-center">
+                            {% if loan.book.cover_image %}
+                            <img src="{{ loan.book.cover_image.url }}" alt="{{ loan.book.title }}" class="w-20 h-28 object-cover rounded-lg">
+                            {% else %}
+                            <i class="fas fa-book text-2xl text-gray-400"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Book and Loan Info -->
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">{{ loan.book.title }}</h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-center">
+                                <i class="fas fa-user text-gray-400 w-4 mr-3"></i>
+                                <span class="text-gray-600">Borrower: <strong>{{ loan.borrower.get_full_name }}</strong></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-calendar text-gray-400 w-4 mr-3"></i>
+                                <span class="text-gray-600">Issue Date: <strong>{{ loan.issue_date|date:"F d, Y" }}</strong></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-clock text-gray-400 w-4 mr-3"></i>
+                                <span class="text-gray-600">Due Date: <strong>{{ loan.due_date|date:"F d, Y" }}</strong></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-hashtag text-gray-400 w-4 mr-3"></i>
+                                <span class="text-gray-600">ISBN: <strong>{{ loan.book.isbn }}</strong></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-map-marker-alt text-gray-400 w-4 mr-3"></i>
+                                <span class="text-gray-600">Location: <strong>{{ loan.book.section }} - {{ loan.book.shelf_location }}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Information -->
+            <div class="mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Current Status -->
+                    <div class="bg-blue-50 rounded-xl p-4">
+                        <h4 class="font-semibold text-blue-800 mb-2 flex items-center">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Current Status
+                        </h4>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                            {% if loan.status == 'active' %}bg-blue-100 text-blue-800
+                            {% elif loan.status == 'overdue' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            <i class="fas fa-circle text-xs mr-1"></i>
+                            {{ loan.get_status_display }}
+                        </span>
+                        {% if loan.is_overdue %}
+                        <div class="mt-2 text-sm text-red-600">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            {{ loan.days_overdue }} days overdue
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Return Information -->
+                    <div class="bg-green-50 rounded-xl p-4">
+                        <h4 class="font-semibold text-green-800 mb-2 flex items-center">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            After Return
+                        </h4>
+                        <div class="text-sm text-green-700">
+                            <div>Status: <strong>Returned</strong></div>
+                            <div>Return Date: <strong>{{ "now"|date:"F d, Y" }}</strong></div>
+                            <div>Available Copies: <strong>{{ loan.book.available_copies|add:1 }}</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fine Information (if applicable) -->
+            {% if loan.is_overdue %}
+            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8">
+                <h4 class="font-semibold text-yellow-800 mb-2 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Late Return Fine
+                </h4>
+                <div class="text-sm text-yellow-700">
+                    <div>Days Overdue: <strong>{{ loan.days_overdue }}</strong></div>
+                    <div>Fine Amount: <strong>${{ loan.calculate_fine|floatformat:2 }}</strong></div>
+                    <div class="mt-2 text-xs">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Fine will be automatically calculated and recorded
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Confirmation Message -->
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-question-circle text-2xl text-blue-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h4 class="font-semibold text-blue-800 mb-2">Confirm Book Return</h4>
+                        <p class="text-blue-700 text-sm">
+                            Are you sure you want to mark this book as returned? This action will:
+                        </p>
+                        <ul class="mt-2 text-sm text-blue-700 space-y-1">
+                            <li class="flex items-center">
+                                <i class="fas fa-check text-green-500 mr-2"></i>
+                                Update the loan status to "Returned"
+                            </li>
+                            <li class="flex items-center">
+                                <i class="fas fa-check text-green-500 mr-2"></i>
+                                Increase available book copies
+                            </li>
+                            {% if loan.is_overdue %}
+                            <li class="flex items-center">
+                                <i class="fas fa-check text-green-500 mr-2"></i>
+                                Calculate and record late return fine
+                            </li>
+                            {% endif %}
+                            <li class="flex items-center">
+                                <i class="fas fa-check text-green-500 mr-2"></i>
+                                Notify next person in reservation queue (if any)
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <form method="post" id="return-form" class="flex justify-end space-x-4">
+                {% csrf_token %}
+                <a href="{% url 'loan_list' %}"
+                   class="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-xl font-medium transition-all duration-300">
+                    <i class="fas fa-times mr-2"></i>Cancel
+                </a>
+                <button type="button" id="return-submit-btn"
+                        class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-medium transition-all duration-300 shadow-lg"
+                        onclick="handleReturnSubmit()">
+                    <i class="fas fa-undo mr-2"></i><span id="return-submit-text">Confirm Return</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Return form submission handler
+function handleReturnSubmit() {
+    console.log('🖱️ Return submit button clicked!');
+
+    // Show confirmation dialog
+    const confirmed = confirm('Are you sure you want to confirm the return of this book? This action cannot be undone.');
+    console.log('✅ User confirmed:', confirmed);
+
+    if (!confirmed) {
+        console.log('❌ User cancelled');
+        return false;
+    }
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('return-submit-btn');
+    const submitText = document.getElementById('return-submit-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        console.log('✅ Loading state applied');
+    }
+
+    console.log('🚀 Submitting return form...');
+
+    // Submit the form directly
+    const form = document.getElementById('return-form');
+    if (form) {
+        form.submit();
+    } else {
+        console.log('❌ Form not found');
+    }
+
+    return false;
+}
+
+console.log('🔍 Return confirmation page script loaded');
+</script>
+{% endblock %}

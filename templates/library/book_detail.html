@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ book.title }} - Library Management System{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">{{ book.title }}</h1>
+            {% if book.subtitle %}
+            <h2 class="text-xl text-gray-600 mt-1">{{ book.subtitle }}</h2>
+            {% endif %}
+        </div>
+        
+        {% if user.can_manage_books %}
+        <div class="flex space-x-2">
+            <a href="{% url 'book_edit' book.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                <i class="fas fa-edit mr-2"></i>Edit
+            </a>
+            <a href="{% url 'book_delete' book.id %}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+                <i class="fas fa-trash mr-2"></i>Delete
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Book Cover and Basic Info -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow p-6">
+                <!-- Cover Image -->
+                <div class="mb-6">
+                    {% if book.cover_image %}
+                    <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="w-full h-80 object-cover rounded">
+                    {% else %}
+                    <div class="w-full h-80 bg-gray-200 rounded flex items-center justify-center">
+                        <i class="fas fa-book text-6xl text-gray-400"></i>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Status and Availability -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-gray-700">Status:</span>
+                        <span class="inline-block px-3 py-1 text-sm font-semibold rounded
+                            {% if book.status == 'available' %}bg-green-100 text-green-800
+                            {% elif book.status == 'borrowed' %}bg-yellow-100 text-yellow-800
+                            {% elif book.status == 'reserved' %}bg-blue-100 text-blue-800
+                            {% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ book.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-gray-700">Availability:</span>
+                        <span class="text-gray-600">{{ book.available_copies }}/{{ book.total_copies }} available</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-gray-700">Location:</span>
+                        <span class="text-gray-600">{{ book.section }} - {{ book.shelf_location }}</span>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-6 space-y-2">
+                    {% if user.can_borrow_books %}
+                        {% if book.is_available %}
+                        <div class="text-center space-y-3">
+                            <p class="text-green-600 font-medium mb-2">
+                                <i class="fas fa-check-circle mr-1"></i>Available for borrowing
+                            </p>
+                            <a href="{% url 'request_book' book.id %}" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-lg block font-medium transition-all duration-200">
+                                <i class="fas fa-hand-holding mr-2"></i>Borrow This Book
+                            </a>
+                            <p class="text-sm text-gray-500">Self-service borrowing available</p>
+                        </div>
+                        {% elif can_reserve %}
+                        <a href="{% url 'reservation_create' book.id %}" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white text-center py-2 rounded-lg block">
+                            <i class="fas fa-bookmark mr-2"></i>Reserve Book
+                        </a>
+                        {% else %}
+                        <div class="text-center">
+                            <p class="text-red-600 font-medium mb-2">
+                                <i class="fas fa-times-circle mr-1"></i>Not available
+                            </p>
+                            {% if reservations %}
+                            <p class="text-sm text-gray-500">{{ reservations.count }} people in queue</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Information -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Book Details -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Book Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <span class="font-medium text-gray-700">Author(s):</span>
+                        <p class="text-gray-600">{{ book.get_authors_display }}</p>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700">ISBN:</span>
+                        <p class="text-gray-600">{{ book.isbn }}</p>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700">Publisher:</span>
+                        <p class="text-gray-600">{{ book.publisher|default:"N/A" }}</p>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700">Publication Date:</span>
+                        <p class="text-gray-600">{{ book.publication_date|date:"M d, Y" }}</p>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700">Edition:</span>
+                        <p class="text-gray-600">{{ book.edition|default:"N/A" }}</p>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700">Pages:</span>
+                        <p class="text-gray-600">{{ book.pages }}</p>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700">Language:</span>
+                        <p class="text-gray-600">{{ book.language }}</p>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700">Categories:</span>
+                        <p class="text-gray-600">{{ book.get_categories_display }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            {% if book.summary %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Summary</h3>
+                <p class="text-gray-600 leading-relaxed">{{ book.summary }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Reservations Queue -->
+            {% if reservations and user.can_manage_books %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Reservation Queue</h3>
+                <div class="space-y-3">
+                    {% for reservation in reservations %}
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                        <div>
+                            <span class="font-medium">#{{ reservation.priority }} - {{ reservation.user.get_full_name }}</span>
+                            <p class="text-sm text-gray-500">Reserved: {{ reservation.reservation_date|date:"M d, Y" }}</p>
+                        </div>
+                        <a href="{% url 'reservation_cancel' reservation.id %}" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Loan History (for librarians/admins) -->
+            {% if loan_history and user.can_manage_books %}
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Recent Loan History</h3>
+                <div class="space-y-3">
+                    {% for loan in loan_history %}
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                        <div>
+                            <span class="font-medium">{{ loan.borrower.get_full_name }}</span>
+                            <p class="text-sm text-gray-500">
+                                {{ loan.issue_date|date:"M d, Y" }} - 
+                                {% if loan.return_date %}{{ loan.return_date|date:"M d, Y" }}{% else %}Active{% endif %}
+                            </p>
+                        </div>
+                        <span class="inline-block px-2 py-1 text-xs font-semibold rounded
+                            {% if loan.status == 'returned' %}bg-green-100 text-green-800
+                            {% elif loan.status == 'active' %}bg-blue-100 text-blue-800
+                            {% elif loan.status == 'overdue' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ loan.get_status_display }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center">
+        <a href="{% url 'book_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Books
+        </a>
+    </div>
+</div>
+{% endblock %}

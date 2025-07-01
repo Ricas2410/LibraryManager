@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cancel Reservation - LibraryPro{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center space-x-4">
+            <a href="{% if user.can_manage_books %}{% url 'reservation_list' %}{% else %}{% url 'my_reservations' %}{% endif %}" class="text-blue-600 hover:text-blue-800">
+                <i class="fas fa-arrow-left text-lg"></i>
+            </a>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Cancel Reservation</h1>
+                <p class="text-gray-600 mt-2">Cancel book reservation</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reservation Details -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Reservation Details</h2>
+        </div>
+        <div class="p-6">
+            <div class="flex items-start space-x-6">
+                <!-- Book Cover -->
+                <div class="flex-shrink-0">
+                    {% if reservation.book.cover_image %}
+                    <img src="{{ reservation.book.cover_image.url }}" alt="{{ reservation.book.title }}" class="w-24 h-32 object-cover rounded-lg shadow-sm">
+                    {% else %}
+                    <div class="w-24 h-32 bg-gray-200 rounded-lg flex items-center justify-center shadow-sm">
+                        <i class="fas fa-book text-gray-400 text-2xl"></i>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Book Details -->
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">{{ reservation.book.title }}</h3>
+                    <p class="text-gray-600 mb-4">
+                        by {% for author in reservation.book.authors.all %}{{ author.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </p>
+                    
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">ISBN</p>
+                            <p class="text-gray-900">{{ reservation.book.isbn|default:"N/A" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Publisher</p>
+                            <p class="text-gray-900">{{ reservation.book.publisher|default:"N/A" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Reservation Date</p>
+                            <p class="text-gray-900">{{ reservation.reservation_date|date:"M d, Y" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Priority in Queue</p>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <i class="fas fa-list-ol mr-1"></i>#{{ reservation.priority }}
+                            </span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Expires On</p>
+                            <p class="text-gray-900">{{ reservation.expiry_date|date:"M d, Y" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Status</p>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <i class="fas fa-bookmark mr-1"></i>{{ reservation.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancellation Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Cancel Reservation</h2>
+        </div>
+        <div class="p-6">
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Confirm Cancellation</h3>
+                        <p class="text-sm text-yellow-700 mt-1">
+                            Are you sure you want to cancel your reservation for "{{ reservation.book.title }}"? 
+                            This action cannot be undone, and you'll lose your place in the queue.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" id="cancel-reservation-form" class="space-y-6">
+                {% csrf_token %}
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-900 mb-2">What happens when you cancel:</h4>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• Your reservation will be removed from the queue</li>
+                        <li>• Other users in the queue will move up in priority</li>
+                        <li>• You can make a new reservation later, but you'll start at the end of the queue</li>
+                        <li>• This action will be logged in your account history</li>
+                    </ul>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button type="button" id="cancel-reservation-btn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm" onclick="handleReservationCancelSubmit()">
+                        <i class="fas fa-times mr-2"></i><span id="cancel-reservation-text">Yes, Cancel Reservation</span>
+                    </button>
+                    <a href="{% if user.can_manage_books %}{% url 'reservation_list' %}{% else %}{% url 'my_reservations' %}{% endif %}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                        <i class="fas fa-arrow-left mr-2"></i>Keep Reservation
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Cancel reservation form submission handler
+function handleReservationCancelSubmit() {
+    console.log('🖱️ Cancel reservation button clicked!');
+
+    // Show confirmation dialog
+    const confirmed = confirm('Are you sure you want to cancel your reservation for "{{ reservation.book.title }}"? You will lose your place in the queue.');
+    console.log('✅ User confirmed:', confirmed);
+
+    if (!confirmed) {
+        console.log('❌ User cancelled');
+        return false;
+    }
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('cancel-reservation-btn');
+    const submitText = document.getElementById('cancel-reservation-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        console.log('✅ Loading state applied');
+    }
+
+    console.log('🚀 Submitting cancel reservation form...');
+
+    // Find the specific cancel reservation form by ID
+    const cancelForm = document.getElementById('cancel-reservation-form');
+    if (cancelForm) {
+        console.log('✅ Cancel reservation form found, submitting...');
+        cancelForm.submit();
+    } else {
+        console.log('❌ Cancel reservation form not found');
+        alert('Error: Could not find the cancel reservation form to submit.');
+        // Restore button state
+        if (submitBtn && submitText) {
+            submitBtn.disabled = false;
+            submitText.innerHTML = '<i class="fas fa-times mr-2"></i>Yes, Cancel Reservation';
+        }
+    }
+
+    return false;
+}
+
+console.log('🔧 Cancel reservation script loaded');
+</script>
+{% endblock %}

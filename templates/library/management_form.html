@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Library Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center space-x-4">
+        <a href="{{ back_url }}" class="text-gray-600 hover:text-gray-900">
+            <i class="fas fa-arrow-left text-xl"></i>
+        </a>
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">{{ title }}</h1>
+            <p class="text-gray-600 mt-1">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-2xl shadow-xl p-8">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Display form errors -->
+            {% if form.non_field_errors %}
+            <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-red-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Please correct the following errors:</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Form Fields -->
+            <div class="space-y-6">
+                {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ field.label }}
+                        {% if field.field.required %}
+                        <span class="text-red-500">*</span>
+                        {% endif %}
+                    </label>
+                    
+                    {% if field.field.widget.input_type == 'textarea' %}
+                    <textarea name="{{ field.name }}" id="{{ field.id_for_label }}"
+                              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                              rows="4" placeholder="{{ field.help_text|default:'' }}"
+                              {% if field.field.required %}required{% endif %}>{{ field.value|default:'' }}</textarea>
+                    {% elif field.field.widget.input_type == 'select' %}
+                    <select name="{{ field.name }}" id="{{ field.id_for_label }}"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                            {% if field.field.required %}required{% endif %}>
+                        {% for choice in field.field.choices %}
+                        <option value="{{ choice.0 }}" {% if choice.0 == field.value %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    {% elif field.field.widget.input_type == 'file' %}
+                    <input type="file" name="{{ field.name }}" id="{{ field.id_for_label }}"
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                           {% if field.field.required %}required{% endif %}>
+                    {% else %}
+                    <input type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.name }}" id="{{ field.id_for_label }}"
+                           value="{{ field.value|default:'' }}"
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+                           placeholder="{{ field.help_text|default:'' }}"
+                           {% if field.field.required %}required{% endif %}
+                           {% if field.field.widget.input_type == 'number' %}step="any"{% endif %}>
+                    {% endif %}
+                    
+                    {% if field.help_text %}
+                    <p class="mt-2 text-sm text-gray-500">{{ field.help_text }}</p>
+                    {% endif %}
+                    
+                    {% if field.errors %}
+                    <div class="mt-2 text-sm text-red-600">
+                        {{ field.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200 mt-8">
+                <a href="{{ back_url }}" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-all duration-200">
+                    Cancel
+                </a>
+                <button type="button" id="management-submit-btn" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 shadow-sm" onclick="handleManagementSubmit()">
+                    <i class="fas fa-save mr-2"></i><span id="management-submit-text">{{ submit_text|default:"Save" }}</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Management form submission handler
+function handleManagementSubmit() {
+    console.log('🖱️ Management submit button clicked!');
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('management-submit-btn');
+    const submitText = document.getElementById('management-submit-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        console.log('✅ Loading state applied');
+    }
+
+    console.log('🚀 Submitting management form...');
+
+    // Submit the form directly
+    const form = document.querySelector('form');
+    if (form) {
+        form.submit();
+    } else {
+        console.log('❌ Form not found');
+    }
+
+    return false;
+}
+
+console.log('🔍 Management form script loaded');
+</script>
+{% endblock %}

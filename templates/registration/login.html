@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - LibraryPro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'ui-sans-serif', 'system-ui'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.8s ease-in-out',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(30px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .input-focus:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center font-sans relative overflow-hidden">
+    <!-- Background Elements -->
+    <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full animate-float"></div>
+        <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-white/5 rounded-full animate-float" style="animation-delay: 1s;"></div>
+        <div class="absolute top-1/2 left-1/4 w-32 h-32 bg-white/10 rounded-full animate-float" style="animation-delay: 2s;"></div>
+    </div>
+
+    <div class="relative z-10 w-full max-w-md mx-4">
+        <!-- Login Card -->
+        <div class="glass-effect rounded-3xl p-8 shadow-2xl animate-slide-up">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="relative inline-block mb-6">
+                    <div class="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto animate-float">
+                        <i class="fas fa-book-open text-3xl text-white"></i>
+                    </div>
+                    <div class="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full animate-pulse"></div>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">Welcome Back</h1>
+                <p class="text-white/80 text-lg">Sign in to LibraryPro</p>
+                <div class="w-16 h-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full mx-auto mt-4"></div>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+            {% for message in messages %}
+            <div class="mb-6 p-4 rounded-2xl {% if message.tags == 'error' %}bg-red-500/20 border border-red-400/30 text-red-100{% elif message.tags == 'warning' %}bg-yellow-500/20 border border-yellow-400/30 text-yellow-100{% elif message.tags == 'success' %}bg-green-500/20 border border-green-400/30 text-green-100{% else %}bg-blue-500/20 border border-blue-400/30 text-blue-100{% endif %} backdrop-blur-sm">
+                <div class="flex items-center">
+                    <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} mr-3"></i>
+                    {{ message }}
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <!-- Login Form -->
+            <form method="post" class="space-y-6" id="loginForm">
+                {% csrf_token %}
+
+                <div class="space-y-4">
+                    <div class="relative">
+                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-white/90 mb-2">
+                            <i class="fas fa-user mr-2"></i>Username / School ID / Email
+                        </label>
+                        <div class="relative">
+                            <input type="text"
+                                   name="{{ form.username.name }}"
+                                   id="{{ form.username.id_for_label }}"
+                                   class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-300 input-focus backdrop-blur-sm"
+                                   placeholder="Username, School ID (e.g., STU001), or Email"
+                                   required>
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <i class="fas fa-user text-white/40"></i>
+                            </div>
+                        </div>
+                        {% if form.username.errors %}
+                        <div class="mt-2 text-sm text-red-300">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.username.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="relative">
+                        <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-white/90 mb-2">
+                            <i class="fas fa-lock mr-2"></i>Password / PIN
+                        </label>
+                        <div class="relative">
+                            <input type="password"
+                                   name="{{ form.password.name }}"
+                                   id="{{ form.password.id_for_label }}"
+                                   class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-300 input-focus backdrop-blur-sm"
+                                   placeholder="Password or School PIN"
+                                   required>
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <button type="button" onclick="togglePassword()" class="text-white/40 hover:text-white/60 transition-colors duration-200">
+                                    <i class="fas fa-eye" id="passwordToggle"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% if form.password.errors %}
+                        <div class="mt-2 text-sm text-red-300">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.password.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if form.non_field_errors %}
+                <div class="p-3 bg-red-500/20 border border-red-400/30 rounded-xl text-red-100 text-sm">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>{{ form.non_field_errors.0 }}
+                </div>
+                {% endif %}
+
+                <div class="pt-4">
+                    <button type="submit"
+                            class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 btn-hover transform focus:outline-none focus:ring-2 focus:ring-white/50 shadow-lg">
+                        <span class="flex items-center justify-center">
+                            <i class="fas fa-sign-in-alt mr-3"></i>
+                            <span id="buttonText">Sign In to LibraryPro</span>
+                        </span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Footer -->
+            <div class="mt-8 text-center">
+                <p class="text-white/70 text-sm">
+                    <i class="fas fa-shield-alt mr-2"></i>
+                    Secure access to your library account
+                </p>
+                <div class="mt-4 pt-4 border-t border-white/20">
+                    <p class="text-white/60 text-xs">
+                        Need an account? Contact your administrator
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo Credentials Card -->
+        <div class="mt-6 glass-effect rounded-2xl p-6 animate-fade-in" style="animation-delay: 0.5s;">
+            <h3 class="text-white font-semibold mb-3 flex items-center">
+                <i class="fas fa-info-circle mr-2 text-blue-300"></i>
+                Demo Credentials
+            </h3>
+            <div class="space-y-3 text-sm text-white/80">
+                <div class="flex justify-between items-center">
+                    <span>Admin:</span>
+                    <code class="bg-white/10 px-2 py-1 rounded">admin / admin123</code>
+                </div>
+                <div class="border-t border-white/20 pt-3">
+                    <p class="text-white/70 text-xs mb-2">
+                        <i class="fas fa-graduation-cap mr-1"></i>
+                        <strong>School Students/Staff:</strong>
+                    </p>
+                    <p class="text-white/60 text-xs">
+                        Use your school ID (STU001, TCH001, etc.) and PIN to login
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('{{ form.password.id_for_label }}');
+            const toggleIcon = document.getElementById('passwordToggle');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.className = 'fas fa-eye';
+            }
+        }
+
+        // Form submission handling
+        document.getElementById('loginForm').addEventListener('submit', function() {
+            const button = this.querySelector('button[type="submit"]');
+            const buttonText = document.getElementById('buttonText');
+
+            button.disabled = true;
+            buttonText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Signing In...';
+
+            // Re-enable after 5 seconds (fallback)
+            setTimeout(() => {
+                button.disabled = false;
+                buttonText.innerHTML = 'Sign In to LibraryPro';
+            }, 5000);
+        });
+
+        // Auto-focus first input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('{{ form.username.id_for_label }}').focus();
+        });
+    </script>
+</body>
+</html>

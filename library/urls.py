@@ -68,6 +68,8 @@ urlpatterns = [
 
     # Settings
     path('settings/', views.library_settings, name='library_settings'),
+    path('settings/backup/', views.backup_system, name='backup_system'),
+    path('settings/restore/', views.restore_system, name='restore_system'),
 
     # Management pages
     path('authors/', views.author_list, name='author_list'),

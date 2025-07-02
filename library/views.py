@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
@@ -12,6 +12,9 @@ from django.urls import reverse
 from datetime import timedelta
 import json
 from functools import wraps
+import subprocess
+import glob
+import os
 
 from .models import (User, Book, Author, Category, Publisher, Loan, Reservation,
                      LibrarySettings, AuditLog, Section, ShelfLocation, Floor, Notification)
@@ -960,709 +963,6 @@ def reservation_cancel(request, reservation_id):
             return redirect('profile')
 
     return render(request, 'library/reservation_cancel_confirm.html', {'reservation': reservation})
-
-
-@user_passes_test(is_librarian_or_admin)
-def reports_dashboard(request):
-    """Reports dashboard with various statistics"""
-    from django.db.models import Count, Q
-    from datetime import datetime, timedelta
-
-    # Date range for reports (last 30 days by default)
-    end_date = timezone.now()
-    start_date = end_date - timedelta(days=30)
-
-    # Basic statistics
-    stats = {
-        'total_books': Book.objects.count(),
-        'total_users': User.objects.filter(is_active_member=True).count(),
-        'active_loans': Loan.objects.filter(status='active').count(),
-        'overdue_loans': Loan.objects.filter(status='overdue').count(),
-        'total_reservations': Reservation.objects.filter(status='active').count(),
-    }
-
-    # Loan statistics for the period
-    loans_in_period = Loan.objects.filter(issue_date__range=[start_date, end_date])
-    stats.update({
-        'loans_issued': loans_in_period.count(),
-        'books_returned': loans_in_period.filter(status='returned').count(),
-        'average_loan_duration': 14,  # Calculate actual average
-    })
-
-    # Popular books (most borrowed)
-    popular_books = Book.objects.annotate(
-        loan_count=Count('loans')
-    ).order_by('-loan_count')[:10]
-
-    # Active users (most loans)
-    active_users = User.objects.annotate(
-        loan_count=Count('loans', filter=Q(loans__issue_date__range=[start_date, end_date]))
-    ).filter(loan_count__gt=0).order_by('-loan_count')[:10]
-
-    # Category statistics
-    category_stats = Category.objects.annotate(
-        book_count=Count('books'),
-        loan_count=Count('books__loans', filter=Q(books__loans__issue_date__range=[start_date, end_date]))
-    ).order_by('-loan_count')
-
-    # Monthly loan trends (last 12 months)
-    monthly_loans = []
-    for i in range(12):
-        month_start = (end_date - timedelta(days=30*i)).replace(day=1)
-        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-        loan_count = Loan.objects.filter(issue_date__range=[month_start, month_end]).count()
-        monthly_loans.append({
-            'month': month_start.strftime('%b %Y'),
-            'loans': loan_count
-        })
-    monthly_loans.reverse()
-
-    context = {
-        'stats': stats,
-        'popular_books': popular_books,
-        'active_users': active_users,
-        'category_stats': category_stats,
-        'monthly_loans': monthly_loans,
-        'start_date': start_date,
-        'end_date': end_date,
-    }
-
-    return render(request, 'library/reports_dashboard.html', context)
-
-
-@user_passes_test(is_librarian_or_admin)
-def export_loans_report(request):
-    """Export loans report to Excel"""
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
-    from django.http import HttpResponse
-    from datetime import datetime
-
-    # Create workbook and worksheet
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Loans Report"
-
-    # Header styling
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    header_alignment = Alignment(horizontal="center", vertical="center")
-
-    # Headers
-    headers = [
-        'Loan ID', 'Book Title', 'ISBN', 'Borrower Name', 'Borrower Role',
-        'Issue Date', 'Due Date', 'Return Date', 'Status', 'Days Overdue', 'Fine Amount'
-    ]
-
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = header_alignment
-
-    # Get loans data
-    loans = Loan.objects.select_related('book', 'borrower').order_by('-issue_date')
-
-    # Add data rows
-    for row, loan in enumerate(loans, 2):
-        ws.cell(row=row, column=1, value=str(loan.id))
-        ws.cell(row=row, column=2, value=loan.book.title)
-        ws.cell(row=row, column=3, value=loan.book.isbn)
-        ws.cell(row=row, column=4, value=loan.borrower.get_full_name())
-        ws.cell(row=row, column=5, value=loan.borrower.get_role_display())
-        ws.cell(row=row, column=6, value=loan.issue_date.strftime('%Y-%m-%d'))
-        ws.cell(row=row, column=7, value=loan.due_date.strftime('%Y-%m-%d'))
-        ws.cell(row=row, column=8, value=loan.return_date.strftime('%Y-%m-%d') if loan.return_date else 'Not Returned')
-        ws.cell(row=row, column=9, value=loan.get_status_display())
-        ws.cell(row=row, column=10, value=loan.days_overdue() if loan.is_overdue() else 0)
-        ws.cell(row=row, column=11, value=float(loan.fine_amount))
-
-    # Auto-adjust column widths
-    for column in ws.columns:
-        max_length = 0
-        column_letter = column[0].column_letter
-        for cell in column:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        adjusted_width = min(max_length + 2, 50)
-        ws.column_dimensions[column_letter].width = adjusted_width
-
-    # Create response
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = f'attachment; filename="loans_report_{datetime.now().strftime("%Y%m%d")}.xlsx"'
-
-    wb.save(response)
-    return response
-
-
-@user_passes_test(is_librarian_or_admin)
-def export_books_report(request):
-    """Export books report to PDF"""
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter, A4
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import inch
-    from django.http import HttpResponse
-    from datetime import datetime
-
-    # Create response
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="books_report_{datetime.now().strftime("%Y%m%d")}.pdf"'
-
-    # Create PDF document
-    doc = SimpleDocTemplate(response, pagesize=A4, topMargin=0.5*inch)
-    elements = []
-
-    # Styles
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=18,
-        spaceAfter=30,
-        alignment=1  # Center alignment
-    )
-
-    # Title
-    title = Paragraph("Library Books Report", title_style)
-    elements.append(title)
-    elements.append(Spacer(1, 20))
-
-    # Report info
-    report_info = Paragraph(f"Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", styles['Normal'])
-    elements.append(report_info)
-    elements.append(Spacer(1, 20))
-
-    # Books data
-    books = Book.objects.select_related('publisher').prefetch_related('authors', 'categories')
-
-    # Table data
-    data = [['Title', 'Authors', 'ISBN', 'Publisher', 'Status', 'Copies']]
-
-    for book in books:
-        data.append([
-            book.title[:30] + '...' if len(book.title) > 30 else book.title,
-            book.get_authors_display()[:25] + '...' if len(book.get_authors_display()) > 25 else book.get_authors_display(),
-            book.isbn,
-            str(book.publisher)[:20] + '...' if book.publisher and len(str(book.publisher)) > 20 else str(book.publisher or 'N/A'),
-            book.get_status_display(),
-            f"{book.available_copies}/{book.total_copies}"
-        ])
-
-    # Create table
-    table = Table(data, colWidths=[2.5*inch, 1.5*inch, 1*inch, 1.2*inch, 0.8*inch, 0.7*inch])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 8),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-
-    elements.append(table)
-
-    # Build PDF
-    doc.build(elements)
-    return response
-
-
-def advanced_search(request):
-    """Advanced search functionality"""
-    books = Book.objects.select_related('publisher').prefetch_related('authors', 'categories')
-    users = User.objects.none()
-    loans = Loan.objects.none()
-
-    search_type = request.GET.get('type', 'books')
-    query = request.GET.get('q', '')
-
-    if query:
-        if search_type == 'books':
-            books = books.filter(
-                Q(title__icontains=query) |
-                Q(subtitle__icontains=query) |
-                Q(authors__first_name__icontains=query) |
-                Q(authors__last_name__icontains=query) |
-                Q(isbn__icontains=query) |
-                Q(publisher__name__icontains=query) |
-                Q(categories__name__icontains=query) |
-                Q(summary__icontains=query)
-            ).distinct()
-
-        elif search_type == 'users':
-            if request.user.can_manage_users():
-                users = User.objects.filter(
-                    Q(username__icontains=query) |
-                    Q(first_name__icontains=query) |
-                    Q(last_name__icontains=query) |
-                    Q(email__icontains=query) |
-                    Q(enrollment_number__icontains=query)
-                ).distinct()
-
-        elif search_type == 'loans':
-            if request.user.can_manage_books():
-                loans = Loan.objects.select_related('book', 'borrower').filter(
-                    Q(book__title__icontains=query) |
-                    Q(borrower__first_name__icontains=query) |
-                    Q(borrower__last_name__icontains=query) |
-                    Q(borrower__username__icontains=query)
-                ).distinct()
-
-    # Pagination
-    if search_type == 'books':
-        paginator = Paginator(books, 12)
-        items = books
-    elif search_type == 'users':
-        paginator = Paginator(users, 20)
-        items = users
-    elif search_type == 'loans':
-        paginator = Paginator(loans, 20)
-        items = loans
-    else:
-        paginator = Paginator([], 20)
-        items = []
-
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'query': query,
-        'search_type': search_type,
-        'page_obj': page_obj,
-        'items': page_obj,
-        'total_results': paginator.count if hasattr(paginator, 'count') else len(items),
-    }
-
-    return render(request, 'library/advanced_search.html', context)
-
-
-@user_passes_test(is_admin)
-def user_management(request):
-    """User management page with multiple import options"""
-    return render(request, 'library/user_management.html')
-
-
-@user_passes_test(is_admin)
-def download_csv_template(request):
-    """Download CSV template for user import"""
-    import csv
-    from django.http import HttpResponse
-
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="user_import_template.csv"'
-
-    writer = csv.writer(response)
-    writer.writerow([
-        'username', 'email', 'first_name', 'last_name', 'role',
-        'phone_number', 'date_of_birth', 'address', 'enrollment_number', 'class_grade'
-    ])
-
-    # Add sample data
-    writer.writerow([
-        'john.doe', 'john.doe@school.edu', 'John', 'Doe', 'student',
-        '+1-555-0123', '2005-01-15', '123 Main St, City, State', 'STU001', '10A'
-    ])
-    writer.writerow([
-        'jane.smith', 'jane.smith@school.edu', 'Jane', 'Smith', 'teacher',
-        '+1-555-0124', '1985-03-20', '456 Oak Ave, City, State', 'TCH001', ''
-    ])
-
-    return response
-
-
-@user_passes_test(is_admin)
-def import_users_csv(request):
-    """Import users from CSV file"""
-    if request.method == 'POST':
-        csv_file = request.FILES.get('csv_file')
-        send_emails = request.POST.get('send_welcome_emails') == 'on'
-
-        if not csv_file:
-            messages.error(request, 'Please select a CSV file.')
-            return redirect('user_management')
-
-        if not csv_file.name.endswith('.csv'):
-            messages.error(request, 'Please upload a valid CSV file.')
-            return redirect('user_management')
-
-        try:
-            import csv
-            import io
-            from django.contrib.auth.hashers import make_password
-
-            # Read CSV file
-            file_data = csv_file.read().decode('utf-8')
-            csv_data = csv.DictReader(io.StringIO(file_data))
-
-            created_users = []
-            errors = []
-
-            for row_num, row in enumerate(csv_data, start=2):
-                try:
-                    # Validate required fields
-                    required_fields = ['username', 'email', 'first_name', 'last_name', 'role']
-                    for field in required_fields:
-                        if not row.get(field, '').strip():
-                            errors.append(f"Row {row_num}: Missing required field '{field}'")
-                            continue
-
-                    # Check if user already exists
-                    if User.objects.filter(username=row['username']).exists():
-                        errors.append(f"Row {row_num}: Username '{row['username']}' already exists")
-                        continue
-
-                    if User.objects.filter(email=row['email']).exists():
-                        errors.append(f"Row {row_num}: Email '{row['email']}' already exists")
-                        continue
-
-                    # Create user
-                    user_data = {
-                        'username': row['username'].strip(),
-                        'email': row['email'].strip(),
-                        'first_name': row['first_name'].strip(),
-                        'last_name': row['last_name'].strip(),
-                        'role': row['role'].strip(),
-                        'password': make_password('temp123'),  # Temporary password
-                        'is_active_member': True,
-                    }
-
-                    # Add optional fields
-                    optional_fields = ['phone_number', 'address', 'enrollment_number', 'class_grade']
-                    for field in optional_fields:
-                        if row.get(field, '').strip():
-                            user_data[field] = row[field].strip()
-
-                    # Handle date of birth
-                    if row.get('date_of_birth', '').strip():
-                        from datetime import datetime
-                        try:
-                            user_data['date_of_birth'] = datetime.strptime(row['date_of_birth'], '%Y-%m-%d').date()
-                        except ValueError:
-                            errors.append(f"Row {row_num}: Invalid date format for date_of_birth (use YYYY-MM-DD)")
-                            continue
-
-                    user = User.objects.create(**user_data)
-                    created_users.append(user)
-
-                    # Log user creation
-                    AuditLog.objects.create(
-                        action='user_created',
-                        user=request.user,
-                        target_user=user,
-                        description=f"User {user.username} created via CSV import",
-                        ip_address=request.META.get('REMOTE_ADDR')
-                    )
-
-                except Exception as e:
-                    errors.append(f"Row {row_num}: {str(e)}")
-
-            # Send welcome emails if requested
-            if send_emails and created_users:
-                from django.core.mail import send_mail
-                from django.conf import settings
-
-                for user in created_users:
-                    try:
-                        send_mail(
-                            'Welcome to LibraryPro',
-                            f'Hello {user.get_full_name()},\n\nYour library account has been created.\n\nUsername: {user.username}\nTemporary Password: temp123\n\nPlease log in and change your password.\n\nBest regards,\nLibrary Team',
-                            settings.DEFAULT_FROM_EMAIL,
-                            [user.email],
-                            fail_silently=True,
-                        )
-                    except:
-                        pass  # Continue even if email fails
-
-            # Show results
-            if created_users:
-                messages.success(request, f'Successfully imported {len(created_users)} users.')
-
-            if errors:
-                error_message = f'{len(errors)} errors occurred:\n' + '\n'.join(errors[:10])
-                if len(errors) > 10:
-                    error_message += f'\n... and {len(errors) - 10} more errors.'
-                messages.error(request, error_message)
-
-        except Exception as e:
-            messages.error(request, f'Error processing CSV file: {str(e)}')
-
-    return redirect('user_management')
-
-
-@user_passes_test(is_admin)
-def sync_school_api(request):
-    """Sync users from school management system API"""
-    if request.method == 'POST':
-        api_url = request.POST.get('api_url')
-        api_key = request.POST.get('api_key')
-
-        if not api_url or not api_key:
-            messages.error(request, 'Please provide both API URL and API key.')
-            return redirect('user_management')
-
-        try:
-            import requests
-            from django.contrib.auth.hashers import make_password
-
-            # Make API request
-            headers = {'Authorization': f'Bearer {api_key}'}
-            response = requests.get(api_url, headers=headers, timeout=30)
-            response.raise_for_status()
-
-            data = response.json()
-            users_data = data.get('users', [])
-
-            if not users_data:
-                messages.warning(request, 'No users found in API response.')
-                return redirect('user_management')
-
-            created_users = []
-            updated_users = []
-            errors = []
-
-            for user_data in users_data:
-                try:
-                    username = user_data.get('username')
-                    email = user_data.get('email')
-
-                    if not username or not email:
-                        errors.append(f"Missing username or email for user: {user_data}")
-                        continue
-
-                    # Check if user exists
-                    user, created = User.objects.get_or_create(
-                        username=username,
-                        defaults={
-                            'email': email,
-                            'first_name': user_data.get('first_name', ''),
-                            'last_name': user_data.get('last_name', ''),
-                            'role': user_data.get('role', 'student'),
-                            'password': make_password('temp123'),
-                            'is_active_member': True,
-                            'phone_number': user_data.get('phone_number', ''),
-                            'enrollment_number': user_data.get('enrollment_number', ''),
-                            'class_grade': user_data.get('class_grade', ''),
-                        }
-                    )
-
-                    if created:
-                        created_users.append(user)
-                        # Log user creation
-                        AuditLog.objects.create(
-                            action='user_created',
-                            user=request.user,
-                            target_user=user,
-                            description=f"User {user.username} created via API sync",
-                            ip_address=request.META.get('REMOTE_ADDR')
-                        )
-                    else:
-                        # Update existing user
-                        user.email = email
-                        user.first_name = user_data.get('first_name', user.first_name)
-                        user.last_name = user_data.get('last_name', user.last_name)
-                        user.role = user_data.get('role', user.role)
-                        user.phone_number = user_data.get('phone_number', user.phone_number)
-                        user.enrollment_number = user_data.get('enrollment_number', user.enrollment_number)
-                        user.class_grade = user_data.get('class_grade', user.class_grade)
-                        user.save()
-                        updated_users.append(user)
-
-                except Exception as e:
-                    errors.append(f"Error processing user {user_data.get('username', 'unknown')}: {str(e)}")
-
-            # Show results
-            result_messages = []
-            if created_users:
-                result_messages.append(f'Created {len(created_users)} new users')
-            if updated_users:
-                result_messages.append(f'Updated {len(updated_users)} existing users')
-
-            if result_messages:
-                messages.success(request, '. '.join(result_messages) + '.')
-
-            if errors:
-                error_message = f'{len(errors)} errors occurred during sync.'
-                messages.error(request, error_message)
-
-        except requests.RequestException as e:
-            messages.error(request, f'API connection error: {str(e)}')
-        except Exception as e:
-            messages.error(request, f'Error syncing with API: {str(e)}')
-
-    return redirect('user_management')
-
-
-def book_list(request):
-    """List all books with search and filtering"""
-    form = BookSearchForm(request.GET)
-    books = Book.objects.select_related('publisher').prefetch_related('authors', 'categories')
-
-    if form.is_valid():
-        query = form.cleaned_data.get('query')
-        category = form.cleaned_data.get('category')
-        status = form.cleaned_data.get('status')
-        section = form.cleaned_data.get('section')
-
-        if query:
-            books = books.filter(
-                Q(title__icontains=query) |
-                Q(authors__first_name__icontains=query) |
-                Q(authors__last_name__icontains=query) |
-                Q(isbn__icontains=query) |
-                Q(publisher__name__icontains=query)
-            ).distinct()
-
-        if category:
-            books = books.filter(categories=category)
-
-        if status:
-            books = books.filter(status=status)
-
-        if section:
-            books = books.filter(section__icontains=section)
-
-    # Pagination
-    paginator = Paginator(books, 12)  # 12 books per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'form': form,
-        'page_obj': page_obj,
-        'books': page_obj,
-    }
-
-    return render(request, 'library/book_list.html', context)
-
-
-def book_detail(request, book_id):
-    """Book detail view"""
-    book = get_object_or_404(Book, id=book_id)
-
-    # Check if user can reserve this book
-    can_reserve = False
-    if request.user.is_authenticated and request.user.can_borrow_books():
-        can_reserve = (
-            not book.is_available() and
-            not Reservation.objects.filter(
-                book=book,
-                user=request.user,
-                status='active'
-            ).exists()
-        )
-
-    # Get active reservations for this book
-    reservations = Reservation.objects.filter(
-        book=book,
-        status='active'
-    ).select_related('user').order_by('priority')
-
-    # Get loan history (for librarians/admins)
-    loan_history = None
-    if request.user.is_authenticated and request.user.can_manage_books():
-        loan_history = Loan.objects.filter(book=book).select_related('borrower').order_by('-issue_date')[:10]
-
-    context = {
-        'book': book,
-        'can_reserve': can_reserve,
-        'reservations': reservations,
-        'loan_history': loan_history,
-    }
-
-    return render(request, 'library/book_detail.html', context)
-
-
-@user_passes_test(can_manage_books)
-def book_add(request):
-    """Add new book"""
-    if request.method == 'POST':
-        form = BookForm(request.POST, request.FILES)
-        if form.is_valid():
-            book = form.save(commit=False)
-            book.created_by = request.user
-            book.save()
-            form.save_m2m()
-
-            # Log the book addition
-            AuditLog.objects.create(
-                action='book_added',
-                user=request.user,
-                book=book,
-                description=f"Book '{book.title}' added by {request.user.username}",
-                ip_address=request.META.get('REMOTE_ADDR')
-            )
-
-            messages.success(request, f'Book "{book.title}" added successfully!')
-            return redirect('book_detail', book_id=book.id)
-    else:
-        form = BookForm()
-
-    return render(request, 'library/book_form.html', {'form': form, 'title': 'Add Book'})
-
-
-@user_passes_test(can_manage_books)
-def book_edit(request, book_id):
-    """Edit existing book"""
-    book = get_object_or_404(Book, id=book_id)
-
-    if request.method == 'POST':
-        form = BookForm(request.POST, request.FILES, instance=book)
-        if form.is_valid():
-            book = form.save()
-
-            # Log the book update
-            AuditLog.objects.create(
-                action='book_updated',
-                user=request.user,
-                book=book,
-                description=f"Book '{book.title}' updated by {request.user.username}",
-                ip_address=request.META.get('REMOTE_ADDR')
-            )
-
-            messages.success(request, f'Book "{book.title}" updated successfully!')
-            return redirect('book_detail', book_id=book.id)
-    else:
-        form = BookForm(instance=book)
-
-    return render(request, 'library/book_form.html', {'form': form, 'title': 'Edit Book', 'book': book})
-
-
-@user_passes_test(can_manage_books)
-def book_delete(request, book_id):
-    """Delete book"""
-    book = get_object_or_404(Book, id=book_id)
-
-    if request.method == 'POST':
-        # Check if book has active loans
-        if Loan.objects.filter(book=book, status='active').exists():
-            messages.error(request, 'Cannot delete book with active loans.')
-            return redirect('book_detail', book_id=book.id)
-
-        book_title = book.title
-
-        # Log the book deletion
-        AuditLog.objects.create(
-            action='book_deleted',
-            user=request.user,
-            description=f"Book '{book_title}' deleted by {request.user.username}",
-            ip_address=request.META.get('REMOTE_ADDR')
-        )
-
-        book.delete()
-        messages.success(request, f'Book "{book_title}" deleted successfully!')
-        return redirect('book_list')
-
-    return render(request, 'library/book_confirm_delete.html', {'book': book})
 
 
 @user_passes_test(is_admin)
@@ -3196,7 +2496,6 @@ def api_mark_all_notifications_read(request):
 
 
 
-
 def get_time_ago(datetime_obj):
     """Helper function to get human-readable time difference"""
     from django.utils import timezone
@@ -3283,10 +2582,8 @@ School Library Team
                 recipient_list=[student.parent_email],
                 fail_silently=True,  # Don't break if email fails
             )
-            return True
-        except Exception as e:
-            print(f"Failed to send parent notification: {e}")
-            return False
+        except:
+            pass  # Continue even if email fails
     return False
 
 
@@ -3354,3 +2651,526 @@ def send_loan_notification(loan, notification_type):
             message=notif['parent_message'],
             book_title=book.title
         )
+
+
+@login_required
+@user_passes_test(is_librarian_or_admin)
+def reports_dashboard(request):
+    """Reports dashboard with various library statistics and export options"""
+    # Get date range from request
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    # Default to last 30 days if no dates provided
+    if not start_date:
+        start_date = (timezone.now() - timedelta(days=30)).date()
+    else:
+        start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+
+    if not end_date:
+        end_date = timezone.now().date()
+    else:
+        end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+
+    # Basic statistics
+    total_books = Book.objects.count()
+    total_users = User.objects.filter(role='student').count()
+    active_loans = Loan.objects.filter(status='active').count()
+    overdue_loans = Loan.objects.filter(
+        status='active',
+        due_date__lt=timezone.now().date()
+    ).count()
+
+    # Loans in date range
+    loans_in_range = Loan.objects.filter(
+        loan_date__date__range=[start_date, end_date]
+    )
+
+    # Popular books (most borrowed)
+    popular_books = Book.objects.annotate(
+        loan_count=Count('loan')
+    ).order_by('-loan_count')[:10]
+
+    # Category statistics
+    category_stats = Category.objects.annotate(
+        book_count=Count('book'),
+        loan_count=Count('book__loan')
+    ).order_by('-loan_count')[:10]
+
+    # Monthly loan trends (last 12 months)
+    monthly_loans = []
+    for i in range(12):
+        month_start = timezone.now().replace(day=1) - timedelta(days=30*i)
+        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        loan_count = Loan.objects.filter(
+            loan_date__date__range=[month_start.date(), month_end.date()]
+        ).count()
+        monthly_loans.append({
+            'month': month_start.strftime('%B %Y'),
+            'count': loan_count
+        })
+    monthly_loans.reverse()
+
+    context = {
+        'total_books': total_books,
+        'total_users': total_users,
+        'active_loans': active_loans,
+        'overdue_loans': overdue_loans,
+        'loans_in_range': loans_in_range.count(),
+        'popular_books': popular_books,
+        'category_stats': category_stats,
+        'monthly_loans': monthly_loans,
+        'start_date': start_date,
+        'end_date': end_date,
+    }
+
+    return render(request, 'library/reports_dashboard.html', context)
+
+
+@login_required
+@user_passes_test(is_librarian_or_admin)
+def export_loans_report(request):
+    """Export loans report as CSV"""
+    import csv
+    from django.http import HttpResponse
+
+    # Get date range from request
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    # Filter loans based on date range
+    loans = Loan.objects.all()
+    if start_date:
+        start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+        loans = loans.filter(loan_date__date__gte=start_date)
+    if end_date:
+        end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+        loans = loans.filter(loan_date__date__lte=end_date)
+
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="loans_report.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Loan ID', 'Book Title', 'ISBN', 'Student Name', 'Student ID',
+        'Loan Date', 'Due Date', 'Return Date', 'Status', 'Renewals'
+    ])
+
+    for loan in loans:
+        writer.writerow([
+            str(loan.id),
+            loan.book.title,
+            loan.book.isbn or 'N/A',
+            loan.borrower.get_full_name(),
+            loan.borrower.student_id or 'N/A',
+            loan.loan_date.strftime('%Y-%m-%d'),
+            loan.due_date.strftime('%Y-%m-%d'),
+            loan.return_date.strftime('%Y-%m-%d') if loan.return_date else 'Not Returned',
+            loan.status.title(),
+            loan.renewals
+        ])
+
+    return response
+
+
+@login_required
+@user_passes_test(is_librarian_or_admin)
+def export_books_report(request):
+    """Export books report as CSV"""
+    import csv
+    from django.http import HttpResponse
+
+    # Get all books with related data
+    books = Book.objects.select_related('category', 'publisher').prefetch_related('authors')
+
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="books_report.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Book ID', 'Title', 'ISBN', 'Authors', 'Category', 'Publisher',
+        'Publication Year', 'Total Copies', 'Available Copies', 'Total Loans',
+        'Currently Borrowed', 'Date Added'
+    ])
+
+    for book in books:
+        # Calculate statistics
+        total_loans = book.loan_set.count()
+        active_loans = book.loan_set.filter(status='active').count()
+        available_copies = book.total_copies - active_loans
+
+        writer.writerow([
+            str(book.id),
+            book.title,
+            book.isbn or 'N/A',
+            ', '.join([author.name for author in book.authors.all()]),
+            book.category.name if book.category else 'N/A',
+            book.publisher.name if book.publisher else 'N/A',
+            book.publication_year or 'N/A',
+            book.total_copies,
+            available_copies,
+            total_loans,
+            active_loans,
+            book.created_at.strftime('%Y-%m-%d')
+        ])
+
+    return response
+
+
+def advanced_search(request):
+    """Advanced search functionality for books"""
+    from django.db import models
+
+    books = Book.objects.all()
+    query = request.GET.get('q', '')
+    category = request.GET.get('category', '')
+    author = request.GET.get('author', '')
+    publisher = request.GET.get('publisher', '')
+    year_from = request.GET.get('year_from', '')
+    year_to = request.GET.get('year_to', '')
+    availability = request.GET.get('availability', '')
+
+    # Apply filters
+    if query:
+        books = books.filter(
+            Q(title__icontains=query) |
+            Q(isbn__icontains=query) |
+            Q(description__icontains=query)
+        )
+
+    if category:
+        books = books.filter(category_id=category)
+
+    if author:
+        books = books.filter(authors__id=author)
+
+    if publisher:
+        books = books.filter(publisher_id=publisher)
+
+    if year_from:
+        try:
+            books = books.filter(publication_year__gte=int(year_from))
+        except ValueError:
+            pass
+
+    if year_to:
+        try:
+            books = books.filter(publication_year__lte=int(year_to))
+        except ValueError:
+            pass
+
+    if availability == 'available':
+        # Books with available copies
+        books = books.annotate(
+            active_loans_count=Count('loan', filter=Q(loan__status='active'))
+        ).filter(active_loans_count__lt=models.F('total_copies'))
+    elif availability == 'unavailable':
+        # Books with no available copies
+        books = books.annotate(
+            active_loans_count=Count('loan', filter=Q(loan__status='active'))
+        ).filter(active_loans_count__gte=models.F('total_copies'))
+
+    # Pagination
+    paginator = Paginator(books.distinct(), 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Get filter options
+    categories = Category.objects.all()
+    authors = Author.objects.all()
+    publishers = Publisher.objects.all()
+
+    context = {
+        'page_obj': page_obj,
+        'books': page_obj,
+        'query': query,
+        'categories': categories,
+        'authors': authors,
+        'publishers': publishers,
+        'selected_category': category,
+        'selected_author': author,
+        'selected_publisher': publisher,
+        'year_from': year_from,
+        'year_to': year_to,
+        'availability': availability,
+    }
+
+    return render(request, 'library/advanced_search.html', context)
+
+
+@login_required
+@user_passes_test(is_librarian_or_admin)
+def user_management(request):
+    """User management dashboard"""
+    users = User.objects.all().order_by('-created_at')
+
+    # Filter by role if specified
+    role_filter = request.GET.get('role', '')
+    if role_filter:
+        users = users.filter(role=role_filter)
+
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        users = users.filter(
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(student_id__icontains=search_query)
+        )
+
+    # Pagination
+    paginator = Paginator(users, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'users': page_obj,
+        'role_filter': role_filter,
+        'search_query': search_query,
+        'total_users': User.objects.count(),
+        'active_users': User.objects.filter(is_active=True).count(),
+        'student_count': User.objects.filter(role='student').count(),
+        'librarian_count': User.objects.filter(role='librarian').count(),
+        'admin_count': User.objects.filter(role='admin').count(),
+    }
+
+    return render(request, 'library/user_management.html', context)
+
+
+@login_required
+@user_passes_test(is_librarian_or_admin)
+def download_csv_template(request):
+    """Download CSV template for user import"""
+    import csv
+    from django.http import HttpResponse
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="user_import_template.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'first_name', 'last_name', 'email', 'student_id', 'role',
+        'phone_number', 'address', 'additional_notification_email'
+    ])
+
+    # Add sample data
+    writer.writerow([
+        'John', 'Doe', 'john.doe@example.com', 'STU001', 'student',
+        '+1234567890', '123 Main St', 'parent@example.com'
+    ])
+    writer.writerow([
+        'Jane', 'Smith', 'jane.smith@example.com', 'STU002', 'student',
+        '+1234567891', '456 Oak Ave', 'guardian@example.com'
+    ])
+
+    return response
+
+
+@login_required
+@user_passes_test(is_librarian_or_admin)
+def import_users_csv(request):
+    """Import users from CSV file"""
+    if request.method == 'POST':
+        csv_file = request.FILES.get('csv_file')
+
+        if not csv_file:
+            messages.error(request, 'Please select a CSV file.')
+            return redirect('user_management')
+
+        if not csv_file.name.endswith('.csv'):
+            messages.error(request, 'Please upload a valid CSV file.')
+            return redirect('user_management')
+
+        try:
+            import csv
+            import io
+
+            # Read CSV file
+            file_data = csv_file.read().decode('utf-8')
+            csv_data = csv.DictReader(io.StringIO(file_data))
+
+            created_count = 0
+            error_count = 0
+            errors = []
+
+            for row_num, row in enumerate(csv_data, start=2):
+                try:
+                    # Validate required fields
+                    if not all([row.get('first_name'), row.get('last_name'), row.get('email')]):
+                        errors.append(f"Row {row_num}: Missing required fields (first_name, last_name, email)")
+                        error_count += 1
+                        continue
+
+                    # Check if user already exists
+                    if User.objects.filter(email=row['email']).exists():
+                        errors.append(f"Row {row_num}: User with email {row['email']} already exists")
+                        error_count += 1
+                        continue
+
+                    # Create user
+                    user = User.objects.create_user(
+                        username=row['email'],
+                        email=row['email'],
+                        first_name=row['first_name'],
+                        last_name=row['last_name'],
+                        student_id=row.get('student_id', ''),
+                        role=row.get('role', 'student'),
+                        phone_number=row.get('phone_number', ''),
+                        address=row.get('address', ''),
+                        additional_notification_email=row.get('additional_notification_email', ''),
+                        password='defaultpassword123'  # Users should change this
+                    )
+                    created_count += 1
+
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    error_count += 1
+
+            # Show results
+            if created_count > 0:
+                messages.success(request, f'Successfully imported {created_count} users.')
+
+            if error_count > 0:
+                error_message = f'{error_count} errors occurred during import:\n' + '\n'.join(errors[:10])
+                if len(errors) > 10:
+                    error_message += f'\n... and {len(errors) - 10} more errors.'
+                messages.error(request, error_message)
+
+        except Exception as e:
+            messages.error(request, f'Error processing CSV file: {str(e)}')
+
+    return redirect('user_management')
+
+
+@login_required
+@user_passes_test(is_librarian_or_admin)
+def sync_school_api(request):
+    """Sync users with school management system API"""
+    if request.method == 'POST':
+        try:
+            # This is a placeholder for school API integration
+            # In a real implementation, you would:
+            # 1. Connect to the school's API
+            # 2. Fetch student data
+            # 3. Create/update user accounts
+            # 4. Handle authentication integration
+
+            messages.info(request, 'School API sync functionality is not yet configured. Please contact your system administrator.')
+
+        except Exception as e:
+            messages.error(request, f'Error syncing with school API: {str(e)}')
+
+    return redirect('user_management')
+
+
+@login_required
+@user_passes_test(is_admin)
+def backup_system(request):
+    """Create system backup"""
+    if request.method == 'POST':
+        try:
+            import json
+            import datetime
+            import os
+            from django.core import serializers
+            from django.http import HttpResponse
+
+            # Create backup filename with timestamp
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_filename = f'library_backup_{timestamp}.json'
+
+            # Get all model data
+            from .models import (User, Book, Author, Category, Publisher, Loan,
+                               Reservation, LibrarySettings, Section, ShelfLocation,
+                               Floor, Notification)
+
+            models_to_backup = [
+                User, Book, Author, Category, Publisher, Loan,
+                Reservation, LibrarySettings, Section, ShelfLocation,
+                Floor, Notification
+            ]
+
+            backup_data = []
+            for model in models_to_backup:
+                model_data = serializers.serialize('json', model.objects.all())
+                backup_data.extend(json.loads(model_data))
+
+            # Create HTTP response with JSON file
+            response = HttpResponse(
+                json.dumps(backup_data, indent=2),
+                content_type='application/json'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{backup_filename}"'
+
+            messages.success(request, f'System backup downloaded successfully: {backup_filename}')
+            return response
+
+        except Exception as e:
+            messages.error(request, f'Error creating backup: {str(e)}')
+
+    return redirect('library_settings')
+
+
+@login_required
+@user_passes_test(is_admin)
+def restore_system(request):
+    """Restore system from backup"""
+    if request.method == 'POST':
+        backup_file = request.FILES.get('backup_file')
+
+        if not backup_file:
+            messages.error(request, 'Please select a backup file.')
+            return redirect('library_settings')
+
+        try:
+            import json
+            from django.core import serializers
+            from django.db import transaction
+
+            # Read and parse the backup file
+            backup_content = backup_file.read().decode('utf-8')
+            backup_data = json.loads(backup_content)
+
+            # Validate backup data structure
+            if not isinstance(backup_data, list):
+                messages.error(request, 'Invalid backup file format.')
+                return redirect('library_settings')
+
+            # Restore data in a transaction
+            with transaction.atomic():
+                # Clear existing data (be careful!)
+                if request.POST.get('clear_existing') == 'yes':
+                    from .models import (User, Book, Author, Category, Publisher, Loan,
+                                       Reservation, LibrarySettings, Section, ShelfLocation,
+                                       Floor, Notification)
+
+                    # Clear in reverse dependency order
+                    Notification.objects.all().delete()
+                    Loan.objects.all().delete()
+                    Reservation.objects.all().delete()
+                    Book.objects.all().delete()
+                    Author.objects.all().delete()
+                    Category.objects.all().delete()
+                    Publisher.objects.all().delete()
+                    Section.objects.all().delete()
+                    ShelfLocation.objects.all().delete()
+                    Floor.objects.all().delete()
+                    LibrarySettings.objects.all().delete()
+                    # Don't delete users as it might break authentication
+
+                # Restore data
+                for obj in serializers.deserialize('json', json.dumps(backup_data)):
+                    obj.save()
+
+            messages.success(request, 'System restored successfully from backup.')
+
+        except json.JSONDecodeError:
+            messages.error(request, 'Invalid JSON format in backup file.')
+        except Exception as e:
+            messages.error(request, f'Error restoring from backup: {str(e)}')
+
+    return redirect('library_settings')

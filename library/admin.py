@@ -166,6 +166,14 @@ class ReservationAdmin(admin.ModelAdmin):
 class LibrarySettingsAdmin(admin.ModelAdmin):
     list_display = ('library_name', 'default_loan_period', 'daily_fine_rate', 'is_active')
 
+    fieldsets = (
+        (None, {'fields': ('library_name', 'library_address', 'library_phone', 'library_email', 'library_logo')}),
+        ('Loan Policies', {'fields': ('default_loan_period', 'max_renewals', 'max_books_per_user')}),
+        ('Fine Policies', {'fields': ('daily_fine_rate', 'max_fine_amount')}),
+        ('Reservation Policies', {'fields': ('reservation_expiry_days', 'max_reservations_per_user')}),
+        ('Operational', {'fields': ('is_active',)}),
+    )
+
     def has_add_permission(self, request):
         # Only allow one settings instance
         return not LibrarySettings.objects.exists()

@@ -389,13 +389,7 @@ class LibrarySettingsForm(forms.ModelForm):
 
     class Meta:
         model = LibrarySettings
-        fields = [
-            'library_name', 'library_address', 'library_phone', 'library_email',
-            'default_loan_period', 'max_renewals', 'max_books_per_user',
-            'daily_fine_rate', 'max_fine_amount',
-            'reservation_expiry_days', 'max_reservations_per_user',
-            'is_active'
-        ]
+        fields = '__all__'
         widgets = {
             'library_name': forms.TextInput(attrs={
                 'class': 'block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm',

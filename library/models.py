@@ -413,6 +413,7 @@ class LibrarySettings(models.Model):
     library_address = models.TextField(blank=True, null=True)
     library_phone = models.CharField(max_length=15, blank=True, null=True)
     library_email = models.EmailField(blank=True, null=True)
+    library_logo = models.ImageField(upload_to='library_logos/', blank=True, null=True, help_text="Upload library logo")
 
     # Operational settings
     is_active = models.BooleanField(default=True)

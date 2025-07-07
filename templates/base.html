@@ -444,7 +444,7 @@
     {% if user.is_authenticated %}
     <div class="flex min-h-screen bg-gray-50">
         <!-- Sidebar -->
-        <div class="hidden lg:flex lg:flex-shrink-0">
+        <div id="sidebar" class="hidden lg:flex lg:flex-shrink-0">
             <div class="flex flex-col w-64">
                 <div class="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
                     <div class="flex items-center flex-shrink-0 px-4">
@@ -687,6 +687,7 @@
                 <button class="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 lg:hidden" onclick="toggleSidebar()">
                     <i class="fas fa-bars text-lg"></i>
                 </button>
+                <!-- Removed duplicate search bar and profile dropdown below navbar -->
                 <div class="flex-1 px-4 flex justify-between">
                     <div class="flex-1 flex">
                         <div class="w-full flex md:ml-0">
@@ -711,7 +712,7 @@
                             </button>
 
                             <!-- Notifications Dropdown -->
-                            <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                            <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 rounded-lg shadow-lg border border-gray-200 z-50">
                                 <div class="p-4 border-b border-gray-200">
                                     <div class="flex items-center justify-between">
                                         <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
@@ -843,6 +844,14 @@
         function toggleMobileMenu() {
             const menu = document.getElementById('mobileMenu');
             menu.classList.toggle('hidden');
+        }
+
+        // Sidebar toggle for mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                sidebar.classList.toggle('hidden');
+            }
         }
 
         // Auto-hide messages after 5 seconds

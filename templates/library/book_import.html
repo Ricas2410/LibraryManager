@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Book Import - LibraryPro{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-2xl mx-auto">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900">Import Books from CSV</h1>
+        <a href="{% url 'book_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Books
+        </a>
+    </div>
+    <div class="bg-white shadow rounded-lg p-8">
+        <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-blue-400 text-lg"></i>
+                </div>
+                <div class="ml-3">
+                    <h4 class="text-sm font-medium text-blue-800">CSV Format Requirements</h4>
+                    <div class="mt-2 text-sm text-blue-700">
+                        <p>Download the template file and fill in book information. <b>Required columns:</b></p>
+                        <ul class="mt-1 list-disc list-inside">
+                            <li>title, authors, pages, categories</li>
+                            <li>Optional: publisher, publication_date, cover_image, description, floor, section, shelf</li>
+                        </ul>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{% url 'download_books_csv_template' %}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">
+                            <i class="fas fa-download mr-2"></i>Download CSV Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <form method="post" action="{% url 'import_books_csv' %}" enctype="multipart/form-data" id="book-csv-form">
+            {% csrf_token %}
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select CSV File <span class="text-red-500">*</span></label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                        <div class="space-y-1 text-center">
+                            <i class="fas fa-file-csv text-4xl text-gray-400"></i>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="csv-file" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
+                                    <span>Upload a file</span>
+                                    <input id="csv-file" name="csv_file" type="file" accept=".csv" class="sr-only" required>
+                                </label>
+                                <p class="pl-1">or drag and drop</p>
+                            </div>
+                            <p class="text-xs text-gray-500">CSV files only</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-4" id="book-csv-progress-bar-container" style="display:none;">
+                    <div class="h-full bg-blue-500 transition-all duration-300" id="book-csv-progress-bar" style="width:0%"></div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" id="book-csv-submit-btn" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                        <i class="fas fa-upload mr-2"></i>Import Books
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+// Book CSV import progress bar and feedback
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('book-csv-form');
+        const progressBarContainer = document.getElementById('book-csv-progress-bar-container');
+        const progressBar = document.getElementById('book-csv-progress-bar');
+        const submitBtn = document.getElementById('book-csv-submit-btn');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Show progress bar
+                progressBarContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
+                // Fake progress for visual feedback
+                let progress = 0;
+                const interval = setInterval(function() {
+                    if (progress < 90) {
+                        progress += 10;
+                        progressBar.style.width = progress + '%';
+                    }
+                }, 200);
+                // Let the form submit normally, then reset after navigation
+                setTimeout(function() {
+                    progressBar.style.width = '100%';
+                }, 2000);
+                // Reset UI after navigation (if AJAX, handle here)
+                setTimeout(function() {
+                    progressBarContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-upload mr-2"></i>Import Books';
+                }, 4000);
+            });
+        }
+    });
+</script>
+{% endblock %}

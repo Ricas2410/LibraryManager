@@ -32,6 +32,7 @@ urlpatterns = [
     path('books/add/', views.book_add, name='book_add'),
     path('books/<uuid:book_id>/edit/', views.book_edit, name='book_edit'),
     path('books/<uuid:book_id>/delete/', views.book_delete, name='book_delete'),
+    path('books/import/', views.book_import_page, name='book_import'),
 
     # Users (Admin only)
     path('users/', views.user_list, name='user_list'),
@@ -64,6 +65,9 @@ urlpatterns = [
     path('user-management/', views.user_management, name='user_management'),
     path('csv-template/', views.download_csv_template, name='download_csv_template'),
     path('import-csv/', views.import_users_csv, name='import_users_csv'),
+    path('download-csv-template/', views.download_csv_template, name='download_csv_template'),
+    path('import-books-csv/', views.import_books_csv, name='import_books_csv'),
+    path('download-books-csv-template/', views.download_books_csv_template, name='download_books_csv_template'),
     path('sync-api/', views.sync_school_api, name='sync_school_api'),
 
     # Settings

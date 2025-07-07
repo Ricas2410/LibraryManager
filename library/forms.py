@@ -7,7 +7,7 @@ from .models import (User, Book, Author, Category, Publisher, Loan, Reservation,
 
 class CustomUserCreationForm(UserCreationForm):
     """Custom user registration form"""
-    email = forms.EmailField(required=True)
+    email = forms.EmailField(required=False, help_text="If left blank for students, a default email will be generated. For staff, email is required.")
     first_name = forms.CharField(max_length=30, required=True)
     last_name = forms.CharField(max_length=30, required=True)
     phone_number = forms.CharField(max_length=15, required=False)
@@ -22,7 +22,7 @@ class CustomUserCreationForm(UserCreationForm):
     # Additional notification email (optional)
     notification_email = forms.EmailField(
         required=False,
-        help_text="Optional additional email for notifications (parent, guardian, or secondary contact)"
+        help_text="Optional parent/guardian email. If provided, credentials will be sent to this address."
     )
 
     role = forms.ChoiceField(choices=User.ROLE_CHOICES, initial='student')
@@ -68,9 +68,9 @@ class CustomAuthenticationForm(AuthenticationForm):
         label='Username / School ID',
         widget=forms.TextInput(attrs={
             'class': 'form-input field-input',
-            'placeholder': 'Username, Email, or School ID (e.g., STU001)'
+            'placeholder': 'Username, Email, School ID, or just the number (e.g., 001)'
         }),
-        help_text='Enter your library username, email, or school ID'
+        help_text='Enter your library username, email, school ID, or just the number part (e.g., 001)'
     )
     password = forms.CharField(
         label='Password / PIN',
@@ -86,28 +86,15 @@ class CustomAuthenticationForm(AuthenticationForm):
         password = self.cleaned_data.get('password')
 
         if username and password:
-            # Try to authenticate with username first
+            # Try to authenticate with username, email, full ID, or just the number
             self.user_cache = authenticate(
                 self.request, 
                 username=username, 
                 password=password
             )
-            
-            # If that fails, try with email
-            if self.user_cache is None:
-                try:
-                    user = User.objects.get(email=username)
-                    self.user_cache = authenticate(
-                        self.request,
-                        username=user.username,
-                        password=password
-                    )
-                except User.DoesNotExist:
-                    pass
-
             if self.user_cache is None:
                 raise forms.ValidationError(
-                    "Please enter a correct username/email and password."
+                    "Please enter a correct username/email/ID/number and password."
                 )
             else:
                 self.confirm_login_allowed(self.user_cache)

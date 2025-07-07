@@ -200,10 +200,10 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Publication Date <span class="text-red-500">*</span>
+                            Publication Date (optional)
                         </label>
                         <input type="date" name="publication_date" value="{{ form.publication_date.value|default:'' }}"
-                               class="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" required>
+                               class="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
                         {% if form.publication_date.errors %}
                         <p class="mt-2 text-sm text-red-600">{{ form.publication_date.errors.0 }}</p>
                         {% endif %}
@@ -268,7 +268,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Section <span class="text-red-500">*</span>
+                            Section (optional)
                         </label>
                         <div class="relative">
                             <input type="text"
@@ -277,8 +277,7 @@
                                    value="{% if form.section.value %}{{ form.instance.section.name }}{% endif %}"
                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
                                    placeholder="Type section name..."
-                                   autocomplete="off"
-                                   required>
+                                   autocomplete="off">
                             <input type="hidden" name="section" id="section-id" value="{{ form.section.value|default:'' }}">
 
                             <!-- Autocomplete dropdown -->
@@ -294,7 +293,7 @@
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Shelf Location <span class="text-red-500">*</span>
+                            Shelf Location (optional)
                         </label>
                         <div class="relative">
                             <input type="text"
@@ -303,8 +302,7 @@
                                    value="{% if form.shelf_location.value %}{{ form.instance.shelf_location.code }}{% endif %}"
                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
                                    placeholder="Type shelf code (e.g., A1, B2)..."
-                                   autocomplete="off"
-                                   required>
+                                   autocomplete="off">
                             <input type="hidden" name="shelf_location" id="shelf-location-id" value="{{ form.shelf_location.value|default:'' }}">
 
                             <!-- Autocomplete dropdown -->
@@ -404,6 +402,13 @@
             </div>
         </div>
     </form>
+
+    <!-- CSV Import Link -->
+    <div class="flex justify-end mb-4">
+        <a href="{% url 'book_import' %}" class="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-700 rounded-md bg-blue-50 hover:bg-blue-100 font-medium text-sm">
+            <i class="fas fa-file-csv mr-2"></i> Import Books via CSV
+        </a>
+    </div>
 </div>
 
 <!-- Publisher Details Modal -->

@@ -23,10 +23,29 @@ class SchoolAPIAuthenticationBackend(BaseBackend):
         """
         if not username or not password:
             return None
-            
+        
+        # Accept login with just the number part of the ID (e.g., 001 for STU001)
+        if username.isdigit() and len(username) <= 6:
+            # Try to find a user whose username ends with the digits
+            from .models import User
+            user_qs = User.objects.filter(username__regex=r'.*[^0-9]?%s$' % username)
+            if user_qs.exists():
+                user = user_qs.first()
+                if user.check_password(password):
+                    return user
+        
         # Check if this is an ID/PIN combination (school system authentication)
         if self.is_school_id_format(username):
             return self.authenticate_with_school_api(username, password)
+        
+        # Also allow login by email
+        from .models import User
+        try:
+            user = User.objects.get(email=username)
+            if user.check_password(password):
+                return user
+        except User.DoesNotExist:
+            pass
         
         return None
     

@@ -375,7 +375,13 @@ def book_list(request):
         status = form.cleaned_data.get('status')
         section = form.cleaned_data.get('section')
 
-        if query:
+        # Get title_starts_with from request (not in form)
+        title_starts_with = request.GET.get('title_starts_with', '')
+
+        if title_starts_with:
+            # Filter books by first letter of title
+            books = books.filter(title__istartswith=title_starts_with)
+        elif query:
             books = books.filter(
                 Q(title__icontains=query) |
                 Q(authors__first_name__icontains=query) |
@@ -2309,7 +2315,7 @@ def overdue_loans(request):
     # Get overdue loans
     overdue_loans = Loan.objects.filter(
         status='active',
-        due_date__lt=timezone.now()
+        due_date__lt=timezone.now().date()
     ).select_related('book', 'borrower').order_by('due_date')
 
     # Search functionality
@@ -2974,6 +2980,7 @@ def download_csv_template(request):
 @user_passes_test(is_librarian_or_admin)
 def import_users_csv(request):
     """Import users from CSV file"""
+    from django.core.mail import send_mail
     if request.method == 'POST':
         csv_file = request.FILES.get('csv_file')
 
@@ -3000,31 +3007,81 @@ def import_users_csv(request):
             for row_num, row in enumerate(csv_data, start=2):
                 try:
                     # Validate required fields
-                    if not all([row.get('first_name'), row.get('last_name'), row.get('email')]):
-                        errors.append(f"Row {row_num}: Missing required fields (first_name, last_name, email)")
+                    if not all([row.get('first_name'), row.get('last_name')]):
+                        errors.append(f"Row {row_num}: Missing required fields (first_name, last_name)")
                         error_count += 1
                         continue
 
-                    # Check if user already exists
-                    if User.objects.filter(email=row['email']).exists():
-                        errors.append(f"Row {row_num}: User with email {row['email']} already exists")
+                    # Email logic: generate if missing for students
+                    email = row.get('email', '').strip()
+                    role = row.get('role', 'student').lower()
+                    if not email and role == 'student':
+                        first = row.get('first_name', '').strip().lower()
+                        last = row.get('last_name', '').strip().lower()
+                        if first and last:
+                            email = f"{first[0]}{last}@deigratiams.edu.gh"
+                        else:
+                            errors.append(f"Row {row_num}: Cannot generate email, missing first or last name.")
+                            error_count += 1
+                            continue
+                    elif not email:
+                        errors.append(f"Row {row_num}: Email is required for non-students.")
                         error_count += 1
                         continue
 
-                    # Create user
+                    enrollment_number = row.get('enrollment_number', '').strip()
+                    # Only check uniqueness if enrollment_number is provided and not blank
+                    if enrollment_number:
+                        if User.objects.filter(enrollment_number=enrollment_number).exists():
+                            errors.append(f"Row {row_num}: User with enrollment number {enrollment_number} already exists")
+                            error_count += 1
+                            continue
+                        username = enrollment_number
+                    else:
+                        username = email
+
+                    # Check if username already exists (should only be email if enrollment_number is blank)
+                    if User.objects.filter(username=username).exists():
+                        errors.append(f"Row {row_num}: User with username {username} already exists")
+                        error_count += 1
+                        continue
+
+                    # Also allow login by email (set both username and email fields)
+                    if User.objects.filter(email=email).exists():
+                        errors.append(f"Row {row_num}: User with email {email} already exists")
+                        error_count += 1
+                        continue
+
+                    # Create user with PIN '12345'
                     user = User.objects.create_user(
-                        username=row['email'],
-                        email=row['email'],
+                        username=username,
+                        email=email,
                         first_name=row['first_name'],
                         last_name=row['last_name'],
-                        student_id=row.get('student_id', ''),
-                        role=row.get('role', 'student'),
+                        role=role,
                         phone_number=row.get('phone_number', ''),
                         address=row.get('address', ''),
-                        additional_notification_email=row.get('additional_notification_email', ''),
-                        password='defaultpassword123'  # Users should change this
+                        date_of_birth=row.get('date_of_birth') or None,
+                        enrollment_number=enrollment_number or None,
+                        class_grade=row.get('class_grade', ''),
+                        notification_email=row.get('notification_email', ''),
+                        password='12345'  # Initial PIN
                     )
                     created_count += 1
+
+                    # Send credentials to parent/guardian if notification_email is provided
+                    parent_email = row.get('notification_email', '').strip()
+                    if parent_email:
+                        try:
+                            send_mail(
+                                subject='Your Child Account Created',
+                                message=f"Account for {user.get_full_name()} has been created.\nID: {username}\nEmail: {email}\nPIN: 12345",
+                                from_email=None,
+                                recipient_list=[parent_email],
+                                fail_silently=True,
+                            )
+                        except Exception as e:
+                            errors.append(f"Row {row_num}: Failed to send parent email: {str(e)}")
 
                 except Exception as e:
                     errors.append(f"Row {row_num}: {str(e)}")
@@ -3035,9 +3092,7 @@ def import_users_csv(request):
                 messages.success(request, f'Successfully imported {created_count} users.')
 
             if error_count > 0:
-                error_message = f'{error_count} errors occurred during import:\n' + '\n'.join(errors[:10])
-                if len(errors) > 10:
-                    error_message += f'\n... and {len(errors) - 10} more errors.'
+                error_message = f'{error_count} errors occurred during import:\n' + '\n'.join(errors)
                 messages.error(request, error_message)
 
         except Exception as e:
@@ -3174,3 +3229,124 @@ def restore_system(request):
             messages.error(request, f'Error restoring from backup: {str(e)}')
 
     return redirect('library_settings')
+
+
+@login_required
+@user_passes_test(can_manage_books)
+def import_books_csv(request):
+    """Import books from CSV file"""
+    if request.method == 'POST':
+        csv_file = request.FILES.get('csv_file')
+
+        if not csv_file:
+            messages.error(request, 'Please select a CSV file.')
+            return redirect('book_import')
+
+        if not csv_file.name.endswith('.csv'):
+            messages.error(request, 'Please upload a valid CSV file.')
+            return redirect('book_import')
+
+        try:
+            import csv
+            import io
+            from .models import Book, Author, Category, Publisher, Section, ShelfLocation, Floor
+
+            file_data = csv_file.read().decode('utf-8')
+            csv_data = csv.DictReader(io.StringIO(file_data))
+
+            created_count = 0
+            error_count = 0
+            errors = []
+
+            for row_num, row in enumerate(csv_data, start=2):
+                try:
+                    # Required fields
+                    title = row.get('title', '').strip()
+                    authors = row.get('authors', '').strip()
+                    pages = row.get('pages', '').strip()
+                    categories = row.get('categories', '').strip()
+                    if not all([title, authors, pages, categories]):
+                        errors.append(f"Row {row_num}: Missing required fields (title, authors, pages, categories)")
+                        error_count += 1
+                        continue
+
+                    # Optional/default fields
+                    publisher_name = row.get('publisher', '').strip() or 'General Publisher'
+                    publication_date = row.get('publication_date', '').strip() or None
+                    cover_image = row.get('cover_image', '').strip() or None
+                    description = row.get('description', '').strip() or ''
+                    floor_name = row.get('floor', '').strip() or 'General'
+                    section_name = row.get('section', '').strip() or 'General'
+                    shelf_name = row.get('shelf', '').strip() or 'General'
+
+                    # Get or create related objects
+                    publisher, _ = Publisher.objects.get_or_create(name=publisher_name)
+                    floor, _ = Floor.objects.get_or_create(name=floor_name)
+                    section, _ = Section.objects.get_or_create(name=section_name)
+                    shelf, _ = ShelfLocation.objects.get_or_create(name=shelf_name)
+
+                    # Authors and categories (comma separated)
+                    author_objs = []
+                    for author_name in authors.split(','):
+                        first, *last = author_name.strip().split(' ', 1)
+                        last = last[0] if last else ''
+                        author, _ = Author.objects.get_or_create(first_name=first, last_name=last)
+                        author_objs.append(author)
+                    category_objs = []
+                    for cat_name in categories.split(','):
+                        cat, _ = Category.objects.get_or_create(name=cat_name.strip())
+                        category_objs.append(cat)
+
+                    # Create book
+                    book = Book.objects.create(
+                        title=title,
+                        publisher=publisher,
+                        publication_date=publication_date,
+                        pages=pages,
+                        description=description,
+                        floor=floor,
+                        section=section,
+                        shelf_location=shelf,
+                    )
+                    book.authors.set(author_objs)
+                    book.categories.set(category_objs)
+                    created_count += 1
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    error_count += 1
+
+            if created_count > 0:
+                messages.success(request, f'Successfully imported {created_count} books.')
+            if error_count > 0:
+                error_message = f'{error_count} errors occurred during import:\n' + '\n'.join(errors)
+                messages.error(request, error_message)
+        except Exception as e:
+            messages.error(request, f'Error processing CSV file: {str(e)}')
+    return redirect('book_import')
+
+
+@login_required
+@user_passes_test(is_librarian_or_admin)
+def download_books_csv_template(request):
+    """Download CSV template for book import (simplified)"""
+    import csv
+    from django.http import HttpResponse
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="book_import_template.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'title', 'author', 'pages', 'category'
+    ])
+    writer.writerow([
+        'Sample Book', 'John Doe', '300', 'Fiction'
+    ])
+    return response
+
+
+@login_required
+@user_passes_test(is_librarian_or_admin)
+def book_import_page(request):
+    """Render the book import page for CSV upload"""
+    return render(request, 'library/book_import.html')

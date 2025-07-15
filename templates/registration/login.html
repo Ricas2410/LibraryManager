@@ -3,7 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - LibraryPro</title>
+    <title>Sign In - {{ library_settings.library_name|default:"LibraryPro" }}</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Sign in to {{ library_settings.library_name|default:'Library Management System' }} - Access your digital library account at Deigratia Montessori School">
+    <meta name="keywords" content="library login, student portal, Deigratia Montessori School, digital library access">
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- Favicon -->
+    {% if library_settings.library_logo %}
+        {% load library_settings_tags %}
+        <link rel="icon" type="image/x-icon" href="{% safe_cloudinary_url library_settings.library_logo width=32 height=32 crop='fill' format='ico' %}">
+        <link rel="shortcut icon" type="image/x-icon" href="{% safe_cloudinary_url library_settings.library_logo width=32 height=32 crop='fill' format='ico' %}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{% safe_cloudinary_url library_settings.library_logo width=180 height=180 crop='fill' %}">
+    {% else %}
+        <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    {% endif %}
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -41,23 +57,29 @@
 
     <style>
         .glass-effect {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .cute-card {
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
 
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
-        .input-focus:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn-hover:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+        .welcome-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
         }
     </style>
 </head>
@@ -69,140 +91,204 @@
         <div class="absolute top-1/2 left-1/4 w-32 h-32 bg-white/10 rounded-full animate-float" style="animation-delay: 2s;"></div>
     </div>
 
-    <div class="relative z-10 w-full max-w-md mx-4">
-        <!-- Login Card -->
-        <div class="glass-effect rounded-3xl p-8 shadow-2xl animate-slide-up">
-            <!-- Header -->
-            <div class="text-center mb-8">
-                <div class="relative inline-block mb-6">
-                    <div class="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto animate-float">
-                        <i class="fas fa-book-open text-3xl text-white"></i>
+    <div class="relative z-10 w-full max-w-4xl mx-4">
+        <div class="flex flex-col lg:grid lg:grid-cols-2 gap-6 items-center">
+
+            <!-- School Information Banner -->
+            <div class="w-full lg:order-1 order-2">
+                <div class="glass-effect rounded-3xl p-8 shadow-2xl animate-slide-up">
+                    {% if library_settings.login_banner %}
+                        {% load library_settings_tags %}
+                        <div class="mb-6">
+                            <img src="{% safe_cloudinary_url library_settings.login_banner width=500 height=300 crop='fill' %}"
+                                 alt="{{ library_settings.library_name }} Banner"
+                                 class="w-full h-64 object-cover rounded-2xl shadow-lg">
+                        </div>
+                    {% endif %}
+
+                    <div class="text-center text-white">
+                        <h2 class="text-3xl font-bold mb-4">{{ library_settings.library_name|default:"Deigratia Montessori School" }}</h2>
+                        <p class="text-white/80 text-lg mb-6">Digital Library Management System</p>
+
+                        {% if library_settings.library_address or library_settings.library_phone or library_settings.library_email %}
+                        <div class="space-y-3 text-left bg-white/10 rounded-2xl p-6">
+                            <h3 class="text-xl font-semibold mb-4 text-center">Contact Information</h3>
+                            {% if library_settings.library_address %}
+                            <div class="flex items-start">
+                                <i class="fas fa-map-marker-alt text-blue-300 mt-1 mr-3"></i>
+                                <span class="text-white/90">{{ library_settings.library_address }}</span>
+                            </div>
+                            {% endif %}
+                            {% if library_settings.library_phone %}
+                            <div class="flex items-center">
+                                <i class="fas fa-phone text-green-300 mr-3"></i>
+                                <span class="text-white/90">{{ library_settings.library_phone }}</span>
+                            </div>
+                            {% endif %}
+                            {% if library_settings.library_email %}
+                            <div class="flex items-center">
+                                <i class="fas fa-envelope text-yellow-300 mr-3"></i>
+                                <span class="text-white/90">{{ library_settings.library_email }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="mt-6 text-center">
+                            <p class="text-white/70 text-sm">
+                                <i class="fas fa-book-open mr-2"></i>
+                                Empowering minds through digital learning
+                            </p>
+                        </div>
                     </div>
-                    <div class="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full animate-pulse"></div>
                 </div>
-                <h1 class="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-                <p class="text-white/80 text-lg">Sign in to LibraryPro</p>
-                <div class="w-16 h-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full mx-auto mt-4"></div>
             </div>
 
-            <!-- Messages -->
-            {% if messages %}
-            {% for message in messages %}
-            <div class="mb-6 p-4 rounded-2xl {% if message.tags == 'error' %}bg-red-500/20 border border-red-400/30 text-red-100{% elif message.tags == 'warning' %}bg-yellow-500/20 border border-yellow-400/30 text-yellow-100{% elif message.tags == 'success' %}bg-green-500/20 border border-green-400/30 text-green-100{% else %}bg-blue-500/20 border border-blue-400/30 text-blue-100{% endif %} backdrop-blur-sm">
-                <div class="flex items-center">
-                    <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} mr-3"></i>
-                    {{ message }}
-                </div>
-            </div>
-            {% endfor %}
-            {% endif %}
+            <!-- Login Card -->
+            <div class="w-full max-w-md mx-auto lg:order-2 order-1">
+                <div class="cute-card rounded-2xl p-6 shadow-xl animate-slide-up">
+                    <!-- Header -->
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                            <i class="fas fa-book-open text-2xl text-white"></i>
+                        </div>
+                        <h1 class="text-2xl font-bold welcome-text mb-2">
+                            Welcome Back! 📚
+                        </h1>
+                        <p class="text-gray-600 text-sm">
+                            Sign in to start reading
+                        </p>
+                    </div>
+
+                    <!-- Messages -->
+                    {% if messages %}
+                    {% for message in messages %}
+                    <div class="mb-4 p-3 rounded-lg {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-700{% elif message.tags == 'warning' %}bg-yellow-50 border border-yellow-200 text-yellow-700{% elif message.tags == 'success' %}bg-green-50 border border-green-200 text-green-700{% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %} text-sm">
+                        <div class="flex items-center">
+                            <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} mr-2"></i>
+                            {{ message }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
 
             <!-- Login Form -->
             <form method="post" class="space-y-6" id="loginForm">
                 {% csrf_token %}
 
-                <div class="space-y-4">
-                    <div class="relative">
-                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-white/90 mb-2">
-                            <i class="fas fa-user mr-2"></i>Username / School ID / Email
-                        </label>
+                    <div class="space-y-4">
                         <div class="relative">
+                            <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-user mr-2 text-purple-500"></i>Student ID
+                            </label>
                             <input type="text"
                                    name="{{ form.username.name }}"
                                    id="{{ form.username.id_for_label }}"
-                                   class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-300 input-focus backdrop-blur-sm"
-                                   placeholder="Username, School ID (e.g., STU001), or Email"
+                                   class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
+                                   placeholder="1001, STU1001"
                                    required>
-                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                                <i class="fas fa-user text-white/40"></i>
+                            {% if form.username.errors %}
+                            <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                                <i class="fas fa-exclamation-circle mr-1"></i>{{ form.username.errors.0 }}
                             </div>
+                            {% endif %}
                         </div>
-                        {% if form.username.errors %}
-                        <div class="mt-2 text-sm text-red-300">
-                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.username.errors.0 }}
-                        </div>
-                        {% endif %}
-                    </div>
 
-                    <div class="relative">
-                        <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-white/90 mb-2">
-                            <i class="fas fa-lock mr-2"></i>Password / PIN
-                        </label>
                         <div class="relative">
-                            <input type="password"
-                                   name="{{ form.password.name }}"
-                                   id="{{ form.password.id_for_label }}"
-                                   class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-300 input-focus backdrop-blur-sm"
-                                   placeholder="Password or School PIN"
-                                   required>
-                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                                <button type="button" onclick="togglePassword()" class="text-white/40 hover:text-white/60 transition-colors duration-200">
+                            <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-lock mr-2 text-purple-500"></i>Password
+                            </label>
+                            <div class="relative">
+                                <input type="password"
+                                       name="{{ form.password.name }}"
+                                       id="{{ form.password.id_for_label }}"
+                                       class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300"
+                                       placeholder="Your password"
+                                       required>
+                                <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-purple-500 transition-colors duration-200">
                                     <i class="fas fa-eye" id="passwordToggle"></i>
                                 </button>
                             </div>
+                            {% if form.password.errors %}
+                            <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                                <i class="fas fa-exclamation-circle mr-1"></i>{{ form.password.errors.0 }}
+                            </div>
+                            {% endif %}
                         </div>
-                        {% if form.password.errors %}
-                        <div class="mt-2 text-sm text-red-300">
-                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.password.errors.0 }}
-                        </div>
-                        {% endif %}
+                    </div>
+
+                    {% if form.non_field_errors %}
+                    <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>{{ form.non_field_errors.0 }}
+                    </div>
+                    {% endif %}
+
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-lg">
+                            <span class="flex items-center justify-center">
+                                <i class="fas fa-sign-in-alt mr-2"></i>
+                                <span id="buttonText">Sign In 📚</span>
+                            </span>
+                        </button>
+                    </div>
+            </form>
+
+                    <!-- Password Reset Link -->
+                    <div class="mt-6 text-center">
+                        <button type="button" onclick="showPasswordReset()" class="text-purple-600 hover:text-purple-800 text-sm font-medium transition-colors duration-200">
+                            <i class="fas fa-key mr-1"></i>Forgot your password?
+                        </button>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-6 text-center">
+                        <p class="text-gray-500 text-xs">
+                            <i class="fas fa-shield-alt mr-1"></i>
+                            Secure library access
+                        </p>
+                        <p class="text-gray-400 text-xs mt-2">
+                            Need help? Contact The IT Support (support@deigratiams.edu.gh)
+                        </p>
                     </div>
                 </div>
+            </div>
 
-                {% if form.non_field_errors %}
-                <div class="p-3 bg-red-500/20 border border-red-400/30 rounded-xl text-red-100 text-sm">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>{{ form.non_field_errors.0 }}
+        <!-- Password Reset Section -->
+        <div id="passwordResetSection" class="hidden bg-white/10 backdrop-blur-md rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/20">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+                    <i class="fas fa-key text-orange-300 text-2xl"></i>
                 </div>
-                {% endif %}
+                <h2 class="text-2xl font-bold text-white mb-2">Reset PIN/Password</h2>
+                <p class="text-white/80 text-sm sm:text-base">Enter your student ID or username to reset your PIN</p>
+            </div>
 
-                <div class="pt-4">
-                    <button type="submit"
-                            class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 btn-hover transform focus:outline-none focus:ring-2 focus:ring-white/50 shadow-lg">
-                        <span class="flex items-center justify-center">
-                            <i class="fas fa-sign-in-alt mr-3"></i>
-                            <span id="buttonText">Sign In to LibraryPro</span>
-                        </span>
+            <form id="passwordResetForm" class="space-y-6">
+                {% csrf_token %}
+                <div>
+                    <label for="reset_identifier" class="block text-sm font-medium text-white/90 mb-2">
+                        <i class="fas fa-id-card mr-2"></i>Student ID or Username
+                    </label>
+                    <input type="text" id="reset_identifier" name="identifier" required
+                           class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                           placeholder="Enter your student ID or username">
+                </div>
+
+                <div id="resetMessage" class="hidden"></div>
+
+                <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                    <button type="button" onclick="hidePasswordReset()" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 backdrop-blur-sm border border-white/20">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Login
+                    </button>
+                    <button type="submit" id="resetSubmitBtn" class="flex-1 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 shadow-lg">
+                        <i class="fas fa-paper-plane mr-2"></i><span id="resetSubmitText">Send Reset Request</span>
                     </button>
                 </div>
             </form>
-
-            <!-- Footer -->
-            <div class="mt-8 text-center">
-                <p class="text-white/70 text-sm">
-                    <i class="fas fa-shield-alt mr-2"></i>
-                    Secure access to your library account
-                </p>
-                <div class="mt-4 pt-4 border-t border-white/20">
-                    <p class="text-white/60 text-xs">
-                        Need an account? Contact your administrator
-                    </p>
-                </div>
-            </div>
         </div>
 
-        <!-- Demo Credentials Card -->
-        <div class="mt-6 glass-effect rounded-2xl p-6 animate-fade-in" style="animation-delay: 0.5s;">
-            <h3 class="text-white font-semibold mb-3 flex items-center">
-                <i class="fas fa-info-circle mr-2 text-blue-300"></i>
-                Demo Credentials
-            </h3>
-            <div class="space-y-3 text-sm text-white/80">
-                <div class="flex justify-between items-center">
-                    <span>Admin:</span>
-                    <code class="bg-white/10 px-2 py-1 rounded">admin / admin123</code>
-                </div>
-                <div class="border-t border-white/20 pt-3">
-                    <p class="text-white/70 text-xs mb-2">
-                        <i class="fas fa-graduation-cap mr-1"></i>
-                        <strong>School Students/Staff:</strong>
-                    </p>
-                    <p class="text-white/60 text-xs">
-                        Use your school ID (STU001, TCH001, etc.) and PIN to login
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
+        </div> <!-- Close grid -->
+    </div> <!-- Close container -->
 
     <script>
         function togglePassword() {
@@ -218,24 +304,114 @@
             }
         }
 
+        function showPasswordReset() {
+            const loginSection = document.querySelector('.bg-white\\/10.backdrop-blur-md');
+            const resetSection = document.getElementById('passwordResetSection');
+
+            if (loginSection && resetSection) {
+                loginSection.style.display = 'none';
+                resetSection.classList.remove('hidden');
+            }
+        }
+
+        function hidePasswordReset() {
+            const loginSection = document.querySelector('.bg-white\\/10.backdrop-blur-md');
+            const resetSection = document.getElementById('passwordResetSection');
+
+            if (loginSection && resetSection) {
+                loginSection.style.display = 'block';
+                resetSection.classList.add('hidden');
+
+                // Clear form
+                document.getElementById('passwordResetForm').reset();
+                const messageDiv = document.getElementById('resetMessage');
+                if (messageDiv) messageDiv.classList.add('hidden');
+            }
+        }
+
+        function showResetMessage(message, type) {
+            const messageDiv = document.getElementById('resetMessage');
+            messageDiv.className = `p-4 rounded-xl text-sm ${type === 'success' ? 'bg-green-500/20 border border-green-400/30 text-green-100' : 'bg-red-500/20 border border-red-400/30 text-red-100'} backdrop-blur-sm`;
+            messageDiv.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-3"></i>
+                    ${message}
+                </div>
+            `;
+            messageDiv.classList.remove('hidden');
+        }
+
         // Form submission handling
         document.getElementById('loginForm').addEventListener('submit', function() {
             const button = this.querySelector('button[type="submit"]');
             const buttonText = document.getElementById('buttonText');
 
             button.disabled = true;
-            buttonText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Signing In...';
+            buttonText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Signing in...';
 
             // Re-enable after 5 seconds (fallback)
             setTimeout(() => {
                 button.disabled = false;
-                buttonText.innerHTML = 'Sign In to LibraryPro';
+                buttonText.innerHTML = 'Sign In 📚';
             }, 5000);
         });
 
         // Auto-focus first input
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('{{ form.username.id_for_label }}').focus();
+
+            // Password reset form handling
+            const resetForm = document.getElementById('passwordResetForm');
+            if (resetForm) {
+                resetForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const identifier = document.getElementById('reset_identifier').value.trim();
+                    if (!identifier) {
+                        showResetMessage('Please enter your student ID or username', 'error');
+                        return;
+                    }
+
+                    const resetBtn = document.getElementById('resetSubmitBtn');
+                    const resetText = document.getElementById('resetSubmitText');
+
+                    // Show loading state
+                    resetBtn.disabled = true;
+                    resetText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+
+                    // Submit reset request
+                    fetch('/password-reset-request/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify({
+                            'identifier': identifier
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        resetBtn.disabled = false;
+                        resetText.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Send Reset Request';
+
+                        if (data.success) {
+                            if (data.has_parent_email) {
+                                showResetMessage(`Reset instructions sent to parent/guardian email: ${data.parent_email}`, 'success');
+                            } else {
+                                showResetMessage('Please contact the administrator or IT service team for PIN reset assistance.', 'error');
+                            }
+                        } else {
+                            showResetMessage(data.message || 'User not found or invalid identifier', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        resetBtn.disabled = false;
+                        resetText.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Send Reset Request';
+                        showResetMessage('Error processing reset request', 'error');
+                    });
+                });
+            }
         });
     </script>
 </body>

@@ -1,0 +1,636 @@
+{% extends 'base.html' %}
+
+{% block title %}Book Import - LibraryPro{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-2xl mx-auto">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900">Import Books from CSV</h1>
+        <a href="{% url 'book_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Books
+        </a>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="space-y-3">
+        {% for message in messages %}
+        <div class="rounded-md p-4 {% if message.tags == 'error' %}bg-red-50 border border-red-200{% elif message.tags == 'success' %}bg-green-50 border border-green-200{% else %}bg-blue-50 border border-blue-200{% endif %}">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    {% if message.tags == 'error' %}
+                    <i class="fas fa-exclamation-circle text-red-400"></i>
+                    {% elif message.tags == 'success' %}
+                    <i class="fas fa-check-circle text-green-400"></i>
+                    {% else %}
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                    {% endif %}
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm {% if message.tags == 'error' %}text-red-800{% elif message.tags == 'success' %}text-green-800{% else %}text-blue-800{% endif %}">
+                        {{ message|linebreaksbr }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="bg-white shadow rounded-lg p-8">
+        <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-blue-400 text-lg"></i>
+                </div>
+                <div class="ml-3">
+                    <h4 class="text-sm font-medium text-blue-800">Simple CSV Format - Only Essential Fields</h4>
+                    <div class="mt-2 text-sm text-blue-700">
+                        <p>Download the template and fill in only the essential book information:</p>
+                        <ul class="mt-2 list-disc list-inside space-y-1">
+                            <li><strong>title</strong> - Book title</li>
+                            <li><strong>authors</strong> - Author name(s) - use semicolon (;) for multiple authors</li>
+                            <li><strong>categories</strong> - Subject/category - use semicolon (;) for multiple categories</li>
+                            <li><strong>pages</strong> - Number of pages</li>
+                            <li><strong>total_copies</strong> - How many copies you have</li>
+                            <li><strong>description</strong> - Brief description (optional)</li>
+                        </ul>
+                        <div class="mt-3 p-3 bg-green-50 rounded border-l-4 border-green-400">
+                            <p class="text-green-800 text-xs">
+                                <strong>Auto-filled:</strong> ISBN numbers, publisher, language, and other details will be automatically set.
+                                You can edit them later from the book management page.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{% url 'download_books_csv_template' %}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">
+                            <i class="fas fa-download mr-2"></i>Download CSV Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <form method="post" action="{% url 'import_books_csv' %}" enctype="multipart/form-data" id="book-csv-form">
+            {% csrf_token %}
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select CSV File <span class="text-red-500">*</span></label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                        <div class="space-y-1 text-center">
+                            <i class="fas fa-file-csv text-4xl text-gray-400"></i>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="csv-file" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
+                                    <span>Upload a file</span>
+                                    <input id="csv-file" name="csv_file" type="file" accept=".csv" class="sr-only" required>
+                                </label>
+                                <p class="pl-1">or drag and drop</p>
+                            </div>
+                            <p class="text-xs text-gray-500">CSV files only</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CSV Preview Section -->
+                <div id="csv-preview-section" class="hidden">
+                    <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+                        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-medium text-gray-900">CSV Preview</h3>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm text-gray-500" id="preview-row-count"></span>
+                                    <button type="button" onclick="clearPreview()" class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200" id="csv-preview-table">
+                                    <thead class="bg-gray-50">
+                                        <tr id="csv-preview-header"></tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200" id="csv-preview-body"></tbody>
+                                </table>
+                            </div>
+                            <div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <div class="flex">
+                                    <i class="fas fa-info-circle text-blue-400 mt-0.5 mr-2"></i>
+                                    <div class="text-sm text-blue-800">
+                                        <p class="font-medium">Preview shows first 5 rows only.</p>
+                                        <p>Review the data and click "Import Books" to proceed.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full" id="book-csv-progress-container" style="display:none;">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium text-gray-700">Uploading and processing...</span>
+                        <span class="text-sm text-gray-500" id="book-csv-progress-text">0%</span>
+                    </div>
+                    <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500 ease-out" id="book-csv-progress-bar" style="width:0%"></div>
+                    </div>
+                </div>
+
+                <!-- File Selection Display -->
+                <div id="selected-file-info" class="hidden">
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg border">
+                        <i class="fas fa-file-csv text-green-500 mr-3"></i>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-900" id="selected-file-name"></p>
+                            <p class="text-xs text-gray-500" id="selected-file-size"></p>
+                        </div>
+                        <button type="button" onclick="clearFileSelection()" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="button" id="book-csv-submit-btn" onclick="handleBookCSVSubmit()" class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200">
+                        <i class="fas fa-upload mr-2"></i><span id="book-csv-submit-text">Import Books</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+// Function to check if we just completed an import
+function checkImportStatus() {
+    const importInProgress = sessionStorage.getItem('bookImportInProgress');
+    const startTime = sessionStorage.getItem('bookImportStartTime');
+
+    if (importInProgress === 'true') {
+        const elapsed = Date.now() - parseInt(startTime || '0');
+        console.log('🔄 Import was in progress, elapsed time:', elapsed + 'ms');
+
+        // Clear the flags
+        sessionStorage.removeItem('bookImportInProgress');
+        sessionStorage.removeItem('bookImportStartTime');
+
+        console.log('✅ Import completed - page was redirected back');
+
+        // Check for Django messages to see if import was successful
+        const messages = document.querySelectorAll('.alert, [class*="bg-green"], [class*="bg-red"]');
+        console.log('Messages found on page:', messages.length);
+        messages.forEach((msg, index) => {
+            console.log(`Message ${index + 1}:`, msg.textContent.trim());
+        });
+    } else {
+        console.log('ℹ️ No import in progress');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📚 Book CSV import script loading...');
+
+    // Check import status first
+    checkImportStatus();
+
+    const form = document.getElementById('book-csv-form');
+    const fileInput = document.getElementById('csv-file');
+    const progressContainer = document.getElementById('book-csv-progress-container');
+    const progressBar = document.getElementById('book-csv-progress-bar');
+    const progressText = document.getElementById('book-csv-progress-text');
+    const submitBtn = document.getElementById('book-csv-submit-btn');
+    const selectedFileInfo = document.getElementById('selected-file-info');
+    const selectedFileName = document.getElementById('selected-file-name');
+    const selectedFileSize = document.getElementById('selected-file-size');
+
+    // Debug: Check if elements are found
+    console.log('Form found:', !!form);
+    console.log('File input found:', !!fileInput);
+    console.log('Submit button found:', !!submitBtn);
+    console.log('Progress container found:', !!progressContainer);
+
+    // Add click listener to submit button for debugging
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function(e) {
+            console.log('🔥 SUBMIT BUTTON CLICKED!');
+            console.log('Button disabled:', submitBtn.disabled);
+            console.log('Form action:', form ? form.action : 'No form');
+            console.log('Form method:', form ? form.method : 'No form');
+            console.log('File selected:', fileInput ? !!fileInput.files[0] : 'No file input');
+            if (fileInput && fileInput.files[0]) {
+                console.log('File name:', fileInput.files[0].name);
+                console.log('File size:', fileInput.files[0].size);
+            }
+        });
+    }
+
+    // Check if we just completed an import
+    checkImportStatus();
+
+    // File selection handler
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            console.log('📁 File input changed!');
+            const file = e.target.files[0];
+            console.log('File selected:', !!file);
+
+            if (file) {
+                console.log('File details:', {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type
+                });
+
+                if (!file.name.toLowerCase().endsWith('.csv')) {
+                    console.log('❌ Invalid file type');
+                    alert('Please select a CSV file.');
+                    fileInput.value = '';
+                    return;
+                }
+
+                console.log('✅ Valid CSV file selected');
+
+                if (selectedFileName) selectedFileName.textContent = file.name;
+                if (selectedFileSize) selectedFileSize.textContent = formatFileSize(file.size);
+                if (selectedFileInfo) selectedFileInfo.classList.remove('hidden');
+
+                console.log('📋 Starting CSV preview...');
+                // Read and preview CSV
+                readAndPreviewCSV(file);
+
+            } else {
+                console.log('❌ No file selected');
+                if (selectedFileInfo) selectedFileInfo.classList.add('hidden');
+
+                // Hide preview section without disabling button
+                const previewSection = document.getElementById('csv-preview-section');
+                if (previewSection) previewSection.classList.add('hidden');
+
+                // Only disable button if no file is selected
+                const submitBtn = document.getElementById('book-csv-submit-btn');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    console.log('❌ Submit button disabled - no file selected');
+                }
+            }
+        });
+    } else {
+        console.error('❌ File input not found!');
+    }
+
+    // Form submission handler
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            console.log('🚀 FORM SUBMIT EVENT TRIGGERED!');
+            console.log('Event type:', e.type);
+            console.log('Form target:', e.target);
+            console.log('Form action URL:', form.action);
+            console.log('Form method:', form.method);
+            console.log('Form enctype:', form.enctype);
+
+            const file = fileInput.files[0];
+            console.log('File check - File exists:', !!file);
+
+            if (!file) {
+                console.log('❌ No file selected - preventing submission');
+                e.preventDefault();
+                alert('Please select a CSV file first.');
+                return false;
+            }
+
+            console.log('✅ File found:', file.name, 'Size:', file.size);
+
+            // Validate file type again
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                console.log('❌ Invalid file type - preventing submission');
+                e.preventDefault();
+                alert('Please select a valid CSV file.');
+                return false;
+            }
+
+            console.log('✅ File validation passed - proceeding with submission');
+
+            console.log('📊 Starting progress indicators...');
+
+            // Show progress and disable form
+            if (progressContainer) {
+                console.log('✅ Showing progress container');
+                progressContainer.style.display = 'block';
+            } else {
+                console.log('❌ Progress container not found');
+            }
+
+            if (submitBtn) {
+                console.log('✅ Disabling submit button and changing text');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+            } else {
+                console.log('❌ Submit button not found');
+            }
+
+            // Hide preview section during upload
+            const previewSection = document.getElementById('csv-preview-section');
+            if (previewSection) {
+                console.log('✅ Hiding preview section');
+                previewSection.style.display = 'none';
+            }
+
+            // Simulate progress for visual feedback
+            console.log('📈 Starting progress animation');
+            let progress = 0;
+            const interval = setInterval(function() {
+                if (progress < 90) {
+                    progress += Math.random() * 15;
+                    if (progress > 90) progress = 90;
+                    if (progressBar) progressBar.style.width = progress + '%';
+                    if (progressText) progressText.textContent = Math.round(progress) + '%';
+                    console.log('Progress:', Math.round(progress) + '%');
+                }
+            }, 300);
+
+            // Complete progress after a delay
+            setTimeout(function() {
+                console.log('🏁 Completing progress to 100%');
+                if (progressBar) progressBar.style.width = '100%';
+                if (progressText) progressText.textContent = '100%';
+                clearInterval(interval);
+            }, 1500);
+
+            // Store form submission state
+            console.log('💾 Storing submission state in sessionStorage');
+            sessionStorage.setItem('bookImportInProgress', 'true');
+            sessionStorage.setItem('bookImportStartTime', Date.now().toString());
+
+            console.log('🎯 Form submission proceeding normally...');
+            // Let the form submit normally
+            return true;
+        });
+    } else {
+        console.error('Book CSV form not found!'); // Debug log
+    }
+});
+
+// Book CSV submission handler (like Add Book button)
+function handleBookCSVSubmit() {
+    console.log('🖱️ Book CSV submit button clicked!');
+
+    // Basic validation
+    const fileInput = document.getElementById('csv-file');
+    if (!fileInput || !fileInput.files[0]) {
+        alert('Please select a CSV file first.');
+        return false;
+    }
+
+    const file = fileInput.files[0];
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Please select a valid CSV file.');
+        return false;
+    }
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('book-csv-submit-btn');
+    const submitText = document.getElementById('book-csv-submit-text');
+    const progressContainer = document.getElementById('book-csv-progress-container');
+    const progressBar = document.getElementById('book-csv-progress-bar');
+    const progressText = document.getElementById('book-csv-progress-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        console.log('✅ Loading state applied');
+    }
+
+    // Show progress indicators
+    if (progressContainer) {
+        progressContainer.style.display = 'block';
+        console.log('✅ Progress container shown');
+    }
+
+    // Hide preview section
+    const previewSection = document.getElementById('csv-preview-section');
+    if (previewSection) {
+        previewSection.style.display = 'none';
+    }
+
+    // Simulate progress
+    let progress = 0;
+    const interval = setInterval(function() {
+        if (progress < 90) {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            if (progressBar) progressBar.style.width = progress + '%';
+            if (progressText) progressText.textContent = Math.round(progress) + '%';
+        }
+    }, 300);
+
+    // Complete progress
+    setTimeout(function() {
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressText) progressText.textContent = '100%';
+        clearInterval(interval);
+    }, 1500);
+
+    console.log('🚀 Submitting book CSV form...');
+
+    // Find and submit the form
+    const bookCSVForm = document.getElementById('book-csv-form');
+    if (bookCSVForm) {
+        console.log('✅ Book CSV form found, submitting...');
+
+        // Store submission state
+        sessionStorage.setItem('bookImportInProgress', 'true');
+        sessionStorage.setItem('bookImportStartTime', Date.now().toString());
+
+        bookCSVForm.submit();
+    } else {
+        console.log('❌ Book CSV form not found');
+        alert('Error: Could not find the form to submit.');
+
+        // Restore button state
+        if (submitBtn && submitText) {
+            submitBtn.disabled = false;
+            submitText.innerHTML = '<i class="fas fa-upload mr-2"></i>Import Books';
+        }
+        if (progressContainer) {
+            progressContainer.style.display = 'none';
+        }
+    }
+
+    return false;
+}
+
+function clearFileSelection() {
+    console.log('🧹 clearFileSelection() called');
+    console.trace('Call stack:'); // This will show us where it's called from
+
+    const fileInput = document.getElementById('csv-file');
+    const selectedFileInfo = document.getElementById('selected-file-info');
+    const submitBtn = document.getElementById('book-csv-submit-btn');
+    const previewSection = document.getElementById('csv-preview-section');
+
+    if (fileInput) fileInput.value = '';
+    if (selectedFileInfo) selectedFileInfo.classList.add('hidden');
+    if (previewSection) previewSection.classList.add('hidden');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        console.log('❌ Submit button disabled by clearFileSelection');
+    }
+}
+
+function readAndPreviewCSV(file) {
+    console.log('📖 Reading CSV file for preview...');
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        console.log('✅ File read successfully');
+        const csv = e.target.result;
+        console.log('CSV content length:', csv.length);
+
+        const lines = csv.split('\n').filter(line => line.trim() !== '');
+        console.log('CSV lines found:', lines.length);
+
+        if (lines.length < 2) {
+            console.log('❌ Not enough lines in CSV');
+            alert('CSV file must contain at least a header row and one data row.');
+            clearFileSelection();
+            return;
+        }
+
+        // Parse CSV
+        const headers = parseCSVLine(lines[0]);
+        const requiredHeaders = ['title', 'authors', 'categories', 'pages'];
+
+        // Validate headers
+        const missingHeaders = requiredHeaders.filter(header =>
+            !headers.some(h => h.toLowerCase().trim() === header.toLowerCase())
+        );
+
+        if (missingHeaders.length > 0) {
+            alert(`Missing required columns: ${missingHeaders.join(', ')}\nPlease download the template and use the correct format.`);
+            clearFileSelection();
+            return;
+        }
+
+        // Show preview
+        displayCSVPreview(headers, lines.slice(1, 6)); // Show first 5 data rows
+
+        // Enable submit button after successful preview
+        const submitBtn = document.getElementById('book-csv-submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            console.log('✅ Submit button enabled after successful preview');
+        }
+    };
+
+    reader.onerror = function() {
+        console.log('❌ Error reading file');
+        alert('Error reading file. Please try again.');
+        clearFileSelection();
+    };
+
+    console.log('📖 Starting to read file...');
+    reader.readAsText(file);
+}
+
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+
+    result.push(current.trim());
+    return result;
+}
+
+function displayCSVPreview(headers, dataRows) {
+    console.log('🎨 Displaying CSV preview...');
+    console.log('Headers:', headers);
+    console.log('Data rows:', dataRows.length);
+
+    const previewSection = document.getElementById('csv-preview-section');
+    const previewHeader = document.getElementById('csv-preview-header');
+    const previewBody = document.getElementById('csv-preview-body');
+    const rowCount = document.getElementById('preview-row-count');
+
+    console.log('Preview elements found:', {
+        section: !!previewSection,
+        header: !!previewHeader,
+        body: !!previewBody,
+        rowCount: !!rowCount
+    });
+
+    // Clear previous content
+    if (previewHeader) previewHeader.innerHTML = '';
+    if (previewBody) previewBody.innerHTML = '';
+
+    // Add headers
+    headers.forEach(header => {
+        const th = document.createElement('th');
+        th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider';
+        th.textContent = header;
+        previewHeader.appendChild(th);
+    });
+
+    // Add data rows
+    dataRows.forEach((line, index) => {
+        const data = parseCSVLine(line);
+        const tr = document.createElement('tr');
+        tr.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+        headers.forEach((header, colIndex) => {
+            const td = document.createElement('td');
+            td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900';
+            td.textContent = data[colIndex] || '';
+            tr.appendChild(td);
+        });
+
+        previewBody.appendChild(tr);
+    });
+
+    // Update row count
+    if (rowCount) {
+        rowCount.textContent = `Showing ${Math.min(dataRows.length, 5)} of ${dataRows.length} rows`;
+        console.log('✅ Row count updated');
+    }
+
+    // Show preview section
+    if (previewSection) {
+        previewSection.classList.remove('hidden');
+        console.log('✅ Preview section shown');
+    } else {
+        console.log('❌ Preview section not found');
+    }
+}
+
+function clearPreview() {
+    console.log('🧹 clearPreview() called');
+    const previewSection = document.getElementById('csv-preview-section');
+    if (previewSection) {
+        previewSection.classList.add('hidden');
+        console.log('✅ Preview section hidden');
+    }
+    // Don't call clearFileSelection() here - it disables the button unnecessarily
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+</script>
+{% endblock %}

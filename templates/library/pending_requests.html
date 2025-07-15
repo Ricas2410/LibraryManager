@@ -1,23 +1,30 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Pending Requests - Library Management System{% endblock %}
+{% block title %}Pending Requests - {{ library_settings.library_name|default:"Library Management System" }}{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
+<div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <!-- Professional Header -->
     <div class="mb-8">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900">Pending Book Requests</h1>
-                <p class="text-gray-600 mt-2">Review and approve student book requests</p>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div class="mb-4 sm:mb-0">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-4">
+                        <i class="fas fa-clock text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Pending Book Requests</h1>
+                        <p class="text-gray-600 mt-1">Review and approve student book requests</p>
+                    </div>
+                </div>
             </div>
-            <div class="flex space-x-4">
-                <a href="{% url 'loan_create' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
-                    <i class="fas fa-plus mr-2"></i>Issue Loan
+            <div class="grid grid-cols-2 sm:flex sm:flex-row gap-3">
+                <a href="{% url 'loan_create' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 sm:px-6 sm:py-3 rounded-xl font-medium transition-all duration-200 shadow-sm flex items-center justify-center text-sm sm:text-base">
+                    <i class="fas fa-plus mr-1 sm:mr-2"></i>Issue Loan
                 </a>
-                <a href="{% url 'loan_list' %}" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
-                    <i class="fas fa-list mr-2"></i>All Loans
+                <a href="{% url 'loan_list' %}" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 sm:px-6 sm:py-3 rounded-xl font-medium transition-all duration-200 shadow-sm flex items-center justify-center text-sm sm:text-base">
+                    <i class="fas fa-list mr-1 sm:mr-2"></i>All Loans
                 </a>
             </div>
         </div>
@@ -28,71 +35,72 @@
         <div class="px-6 py-4 border-b border-gray-200">
             <h2 class="text-lg font-semibold text-gray-900">Search Requests</h2>
         </div>
-        <div class="p-6">
-            <form method="get" class="flex items-center space-x-4">
+        <div class="p-4 sm:p-6">
+            <form method="get" class="space-y-4 sm:space-y-0 sm:flex sm:items-center sm:space-x-4">
                 <div class="flex-1">
                     <div class="relative">
-                        <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                             <i class="fas fa-search text-gray-400 text-sm"></i>
                         </div>
-                        <input type="text" name="search" value="{{ search_query }}" 
-                               placeholder="Search by book title, student name, or username..."
-                               class="w-full pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                               style="padding-left: 3rem;">
+                        <input type="text" name="search" value="{{ search_query }}"
+                               placeholder="Search by book title, student name..."
+                               class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300">
                     </div>
                 </div>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200">
-                    <i class="fas fa-search mr-2"></i>Search
-                </button>
-                {% if search_query %}
-                <a href="{% url 'pending_requests' %}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200">
-                    <i class="fas fa-times mr-2"></i>Clear
-                </a>
-                {% endif %}
+                <div class="grid grid-cols-2 gap-3 sm:flex sm:space-x-4">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 sm:px-6 sm:py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base">
+                        <i class="fas fa-search mr-1 sm:mr-2"></i>Search
+                    </button>
+                    {% if search_query %}
+                    <a href="{% url 'pending_requests' %}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 sm:px-6 sm:py-3 rounded-lg font-medium transition-all duration-200 text-center text-sm sm:text-base">
+                        <i class="fas fa-times mr-1 sm:mr-2"></i>Clear
+                    </a>
+                    {% endif %}
+                </div>
             </form>
         </div>
     </div>
 
     <!-- Statistics -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-clock text-orange-600 text-xl"></i>
+    <div class="grid grid-cols-3 gap-2 sm:gap-6 mb-8">
+        <div class="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center text-center sm:text-left">
+                <div class="flex-shrink-0 mx-auto sm:mx-0">
+                    <div class="w-8 h-8 sm:w-12 sm:h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-clock text-orange-600 text-sm sm:text-xl"></i>
                     </div>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Pending</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ page_obj.paginator.count }}</p>
+                <div class="mt-2 sm:mt-0 sm:ml-4">
+                    <p class="text-xs sm:text-sm font-medium text-gray-500">Total Pending</p>
+                    <p class="text-lg sm:text-2xl font-bold text-gray-900">{{ page_obj.paginator.count }}</p>
                 </div>
             </div>
         </div>
         
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-users text-blue-600 text-xl"></i>
+        <div class="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center text-center sm:text-left">
+                <div class="flex-shrink-0 mx-auto sm:mx-0">
+                    <div class="w-8 h-8 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-users text-blue-600 text-sm sm:text-xl"></i>
                     </div>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Unique Students</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ pending_loans|length }}</p>
+                <div class="mt-2 sm:mt-0 sm:ml-4">
+                    <p class="text-xs sm:text-sm font-medium text-gray-500">Students</p>
+                    <p class="text-lg sm:text-2xl font-bold text-gray-900">{{ pending_loans|length }}</p>
                 </div>
             </div>
         </div>
-        
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-book text-green-600 text-xl"></i>
+
+        <div class="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center text-center sm:text-left">
+                <div class="flex-shrink-0 mx-auto sm:mx-0">
+                    <div class="w-8 h-8 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-book text-green-600 text-sm sm:text-xl"></i>
                     </div>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Books Requested</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ pending_loans|length }}</p>
+                <div class="mt-2 sm:mt-0 sm:ml-4">
+                    <p class="text-xs sm:text-sm font-medium text-gray-500">Books</p>
+                    <p class="text-lg sm:text-2xl font-bold text-gray-900">{{ pending_loans|length }}</p>
                 </div>
             </div>
         </div>
@@ -105,7 +113,8 @@
         </div>
         
         {% if pending_loans %}
-        <div class="overflow-x-auto">
+        <!-- Desktop Table View -->
+        <div class="hidden lg:block overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -154,11 +163,11 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                            <a href="{% url 'approve_request' loan.id %}" 
+                            <a href="{% url 'approve_request' loan.id %}"
                                class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
                                 <i class="fas fa-check mr-1"></i>Approve
                             </a>
-                            <a href="{% url 'reject_request' loan.id %}" 
+                            <a href="{% url 'reject_request' loan.id %}"
                                class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
                                 <i class="fas fa-times mr-1"></i>Reject
                             </a>
@@ -168,16 +177,75 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Mobile Card View -->
+        <div class="lg:hidden space-y-3 p-2 sm:p-4">
+            {% for loan in pending_loans %}
+            <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <!-- Student & Status Row -->
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center flex-1 min-w-0">
+                        <div class="flex-shrink-0 h-8 w-8">
+                            <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <i class="fas fa-user text-blue-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3 flex-1 min-w-0">
+                            <div class="text-sm font-medium text-gray-900 truncate">{{ loan.borrower.get_full_name }}</div>
+                            <div class="text-xs text-gray-500">{{ loan.borrower.username }}</div>
+                        </div>
+                    </div>
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 ml-2">
+                        <i class="fas fa-clock mr-1"></i>Pending
+                    </span>
+                </div>
+
+                <!-- Book Info -->
+                <div class="mb-3 bg-white rounded-md p-2">
+                    <div class="text-sm font-medium text-gray-900 truncate">{{ loan.book.title }}</div>
+                    <div class="text-xs text-green-600">{{ loan.book.available_copies }} available</div>
+                </div>
+
+                <!-- Dates Row -->
+                <div class="grid grid-cols-2 gap-3 mb-3 text-xs">
+                    <div>
+                        <div class="text-gray-500">Request</div>
+                        <div class="font-medium">{{ loan.issue_date|date:"M d" }}</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500">Due</div>
+                        <div class="font-medium">{{ loan.due_date|date:"M d" }}</div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="{% url 'approve_request' loan.id %}"
+                       class="inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors duration-200">
+                        <i class="fas fa-check mr-1"></i>Approve
+                    </a>
+                    <a href="{% url 'reject_request' loan.id %}"
+                       class="inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors duration-200">
+                        <i class="fas fa-times mr-1"></i>Reject
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         
         <!-- Pagination -->
         {% if page_obj.has_other_pages %}
         <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
             <div class="flex-1 flex justify-between sm:hidden">
                 {% if page_obj.has_previous %}
-                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Previous</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50">
+                        <i class="fas fa-chevron-left mr-2"></i>Previous
+                    </a>
                 {% endif %}
                 {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Next</a>
+                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50">
+                        Next<i class="fas fa-chevron-right ml-2"></i>
+                    </a>
                 {% endif %}
             </div>
             <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">

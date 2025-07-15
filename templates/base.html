@@ -3,7 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Library Management System{% endblock %}</title>
+    <title>{% block title %}{{ library_settings.library_name|default:"Library Management System" }}{% endblock %}</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="{% block description %}{{ library_settings.library_name|default:'Library Management System' }} - Digital library management for Deigratia Montessori School. Browse books, manage loans, and track reading progress.{% endblock %}">
+    <meta name="keywords" content="library, books, education, Deigratia Montessori School, digital library, book management, student reading">
+    <meta name="author" content="{{ library_settings.library_name|default:'Library Management System' }}">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{% block og_title %}{{ library_settings.library_name|default:'Library Management System' }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Digital library management system for Deigratia Montessori School{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    {% if library_settings.library_logo %}
+        {% load library_settings_tags %}
+        <meta property="og:image" content="{% safe_cloudinary_url library_settings.library_logo width=1200 height=630 crop='fill' %}">
+    {% endif %}
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}{{ library_settings.library_name|default:'Library Management System' }}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Digital library management system for Deigratia Montessori School{% endblock %}">
+    {% if library_settings.library_logo %}
+        <meta name="twitter:image" content="{% safe_cloudinary_url library_settings.library_logo width=1200 height=630 crop='fill' %}">
+    {% endif %}
+
+    <!-- Favicon -->
+    {% if library_settings.library_logo %}
+        {% load library_settings_tags %}
+        <link rel="icon" type="image/x-icon" href="{% safe_cloudinary_url library_settings.library_logo width=32 height=32 crop='fill' format='ico' %}">
+        <link rel="shortcut icon" type="image/x-icon" href="{% safe_cloudinary_url library_settings.library_logo width=32 height=32 crop='fill' format='ico' %}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{% safe_cloudinary_url library_settings.library_logo width=180 height=180 crop='fill' %}">
+        <link rel="icon" type="image/png" sizes="32x32" href="{% safe_cloudinary_url library_settings.library_logo width=32 height=32 crop='fill' %}">
+        <link rel="icon" type="image/png" sizes="16x16" href="{% safe_cloudinary_url library_settings.library_logo width=16 height=16 crop='fill' %}">
+    {% else %}
+        <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    {% endif %}
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -154,12 +190,12 @@
         .form-control::placeholder,
         input::placeholder,
         textarea::placeholder {
-            color: #9ca3af !important;
+            color: #b9bcc2ff !important;
         }
 
         /* Ensure form labels are visible */
         label {
-            color: #374151 !important;
+            color: #575e68ff !important;
             font-weight: 500 !important;
             margin-bottom: 8px !important;
             display: block !important;
@@ -173,237 +209,15 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen font-sans">
-    <!-- Navigation -->
-    <nav class="gradient-bg shadow-xl relative z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-20">
-                <div class="flex items-center">
-                    <a href="{% url 'home' %}" class="flex items-center space-x-3 group">
-                        <div class="relative">
-                            <i class="fas fa-book-open text-3xl text-white group-hover:text-blue-200 transition-colors duration-300"></i>
-                            <div class="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-2xl font-bold text-white group-hover:text-blue-100 transition-colors duration-300">LibraryPro</span>
-                            <span class="text-xs text-blue-200 font-medium">Management System</span>
-                        </div>
-                    </a>
-                </div>
 
-                {% if user.is_authenticated %}
-                <div class="flex items-center space-x-4">
-                    <!-- Search Bar -->
-                    <div class="flex-1 max-w-lg">
-                        <form action="{% url 'advanced_search' %}" method="get" class="relative">
-                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
-                                <i class="fas fa-search text-white/70 text-sm"></i>
-                            </div>
-                            <input type="text"
-                                   name="query"
-                                   class="block w-full pr-3 py-2 border border-white/20 rounded-lg bg-white/10 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 backdrop-blur-sm"
-                                   placeholder="Search books, users, loans..." style="padding-left: 3rem;"
-                                   id="global-search">
-                        </form>
-                    </div>
 
-                    <!-- Admin Notifications (for librarians/admins) -->
-                    {% if user.role == 'librarian' or user.role == 'admin' or user.is_superuser %}
-                    <div class="relative group">
-                        <a href="{% url 'pending_requests' %}" class="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200 relative block">
-                            <i class="fas fa-tasks text-lg"></i>
-                            {% if total_admin_notifications > 0 %}
-                            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">{{ total_admin_notifications }}</span>
-                            {% endif %}
-                        </a>
 
-                        <!-- Admin Notification Dropdown -->
-                        <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border border-gray-200">
-                            <div class="px-4 py-3 border-b border-gray-200">
-                                <h3 class="text-sm font-semibold text-gray-900">Admin Notifications</h3>
-                            </div>
-                            <div class="max-h-64 overflow-y-auto">
-                                {% if pending_requests_count > 0 %}
-                                <a href="{% url 'pending_requests' %}" class="block px-4 py-3 hover:bg-gray-50 transition-colors duration-200">
-                                    <div class="flex items-center">
-                                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                            <i class="fas fa-clock text-blue-600 text-sm"></i>
-                                        </div>
-                                        <div class="flex-1">
-                                            <p class="text-sm font-medium text-gray-900">{{ pending_requests_count }} Pending Request{{ pending_requests_count|pluralize }}</p>
-                                            <p class="text-xs text-gray-500">Students waiting for book approval</p>
-                                        </div>
-                                        <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">{{ pending_requests_count }}</span>
-                                    </div>
-                                </a>
-                                {% endif %}
 
-                                {% if active_reservations_count > 0 %}
-                                <a href="{% url 'reservation_list' %}" class="block px-4 py-3 hover:bg-gray-50 transition-colors duration-200">
-                                    <div class="flex items-center">
-                                        <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
-                                            <i class="fas fa-bookmark text-yellow-600 text-sm"></i>
-                                        </div>
-                                        <div class="flex-1">
-                                            <p class="text-sm font-medium text-gray-900">{{ active_reservations_count }} Active Reservation{{ active_reservations_count|pluralize }}</p>
-                                            <p class="text-xs text-gray-500">Students waiting for books</p>
-                                        </div>
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">{{ active_reservations_count }}</span>
-                                    </div>
-                                </a>
-                                {% endif %}
 
-                                {% if overdue_loans_count > 0 %}
-                                <a href="{% url 'overdue_loans' %}" class="block px-4 py-3 hover:bg-gray-50 transition-colors duration-200">
-                                    <div class="flex items-center">
-                                        <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
-                                            <i class="fas fa-exclamation-triangle text-red-600 text-sm"></i>
-                                        </div>
-                                        <div class="flex-1">
-                                            <p class="text-sm font-medium text-gray-900">{{ overdue_loans_count }} Overdue Book{{ overdue_loans_count|pluralize }}</p>
-                                            <p class="text-xs text-gray-500">Books past due date - immediate attention needed</p>
-                                        </div>
-                                        <span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">{{ overdue_loans_count }}</span>
-                                    </div>
-                                </a>
-                                {% endif %}
 
-                                {% if due_soon_loans_count > 0 %}
-                                <a href="{% url 'due_soon_loans' %}" class="block px-4 py-3 hover:bg-gray-50 transition-colors duration-200">
-                                    <div class="flex items-center">
-                                        <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                                            <i class="fas fa-clock text-orange-600 text-sm"></i>
-                                        </div>
-                                        <div class="flex-1">
-                                            <p class="text-sm font-medium text-gray-900">{{ due_soon_loans_count }} Book{{ due_soon_loans_count|pluralize }} Due Soon</p>
-                                            <p class="text-xs text-gray-500">Due within next 3 days</p>
-                                        </div>
-                                        <span class="bg-orange-100 text-orange-800 text-xs font-medium px-2 py-1 rounded-full">{{ due_soon_loans_count }}</span>
-                                    </div>
-                                </a>
-                                {% endif %}
 
-                                {% if total_admin_notifications == 0 %}
-                                <div class="px-4 py-3 text-sm text-gray-500 text-center">
-                                    No pending admin tasks
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div class="px-4 py-2 border-t border-gray-200">
-                                <a href="{% url 'reports_dashboard' %}" class="text-xs text-blue-600 hover:text-blue-800">View full dashboard</a>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
 
-                    <!-- User Notifications -->
-                    <div class="relative group">
-                        <button class="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200 relative">
-                            <i class="fas fa-bell text-lg"></i>
-                            <span id="notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center {% if unread_notifications_count == 0 %}hidden{% endif %}">{{ unread_notifications_count|default:0 }}</span>
-                        </button>
 
-                        <!-- Notification Dropdown -->
-                        <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border border-gray-200">
-                            <div class="px-4 py-3 border-b border-gray-200">
-                                <h3 class="text-sm font-semibold text-gray-900">Notifications</h3>
-                            </div>
-                            <div id="notification-list" class="max-h-64 overflow-y-auto">
-                                <div class="px-4 py-3 text-sm text-gray-500 text-center">
-                                    No new notifications
-                                </div>
-                            </div>
-                            <div class="px-4 py-2 border-t border-gray-200">
-                                <a href="{% url 'notifications_list' %}" class="text-xs text-blue-600 hover:text-blue-800">View all notifications</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- User Menu -->
-                    <div class="relative group">
-                        <button class="flex items-center space-x-3 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl transition-all duration-300 group">
-                            <div class="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center">
-                                {% if user.profile_picture %}
-                                <img src="{{ user.profile_picture.url }}" alt="Profile" class="w-8 h-8 rounded-full object-cover">
-                                {% else %}
-                                <i class="fas fa-user text-white"></i>
-                                {% endif %}
-                            </div>
-                            <div class="hidden sm:block text-left">
-                                <div class="text-white font-medium text-sm">{{ user.get_full_name|default:user.username }}</div>
-                                <div class="text-blue-200 text-xs">{{ user.get_role_display }}</div>
-                            </div>
-                            <i class="fas fa-chevron-down text-white text-sm group-hover:rotate-180 transition-transform duration-300"></i>
-                        </button>
-
-                        <!-- Dropdown Menu -->
-                        <div class="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
-                            <div class="px-4 py-3 border-b border-gray-100">
-                                <div class="font-semibold text-gray-800">{{ user.get_full_name|default:user.username }}</div>
-                                <div class="text-sm text-gray-500">{{ user.email }}</div>
-                                <div class="text-xs text-blue-600 font-medium mt-1">{{ user.get_role_display }}</div>
-                            </div>
-                            <a href="{% url 'profile' %}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 transition-colors duration-200">
-                                <i class="fas fa-user-circle mr-3 text-blue-500"></i>
-                                <span>My Profile</span>
-                            </a>
-                            {% if user.can_manage_users %}
-                            <a href="{% url 'register' %}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 transition-colors duration-200">
-                                <i class="fas fa-user-plus mr-3 text-green-500"></i>
-                                <span>Add User</span>
-                            </a>
-                            {% endif %}
-                            <div class="border-t border-gray-100 my-1"></div>
-                            <a href="{% url 'logout' %}" class="flex items-center px-4 py-3 text-red-600 hover:bg-red-50 transition-colors duration-200">
-                                <i class="fas fa-sign-out-alt mr-3"></i>
-                                <span>Sign Out</span>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Mobile Menu Button -->
-                    <button class="lg:hidden text-white p-2" onclick="toggleMobileMenu()">
-                        <i class="fas fa-bars text-xl"></i>
-                    </button>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Mobile Menu -->
-        {% if user.is_authenticated %}
-        <div id="mobileMenu" class="lg:hidden hidden bg-white/10 backdrop-blur-md">
-            <div class="px-4 py-3 space-y-2">
-                <a href="{% url 'home' %}" class="block px-4 py-2 text-white hover:bg-white/20 rounded-lg transition-colors duration-200">
-                    <i class="fas fa-home mr-3"></i>Dashboard
-                </a>
-                <a href="{% url 'book_list' %}" class="block px-4 py-2 text-white hover:bg-white/20 rounded-lg transition-colors duration-200">
-                    <i class="fas fa-books mr-3"></i>Books
-                </a>
-                <a href="{% url 'advanced_search' %}" class="block px-4 py-2 text-white hover:bg-white/20 rounded-lg transition-colors duration-200">
-                    <i class="fas fa-search mr-3"></i>Search
-                </a>
-                {% if user.can_manage_books %}
-                <a href="{% url 'loan_list' %}" class="block px-4 py-2 text-white hover:bg-white/20 rounded-lg transition-colors duration-200">
-                    <i class="fas fa-hand-holding mr-3"></i>Loans
-                </a>
-                <a href="{% url 'book_add' %}" class="block px-4 py-2 text-white hover:bg-white/20 rounded-lg transition-colors duration-200">
-                    <i class="fas fa-plus mr-3"></i>Add Book
-                </a>
-                {% endif %}
-                {% if user.can_manage_users %}
-                <a href="{% url 'user_list' %}" class="block px-4 py-2 text-white hover:bg-white/20 rounded-lg transition-colors duration-200">
-                    <i class="fas fa-users mr-3"></i>Users
-                </a>
-                {% endif %}
-                {% if user.can_manage_books %}
-                <a href="{% url 'reports_dashboard' %}" class="block px-4 py-2 text-white hover:bg-white/20 rounded-lg transition-colors duration-200">
-                    <i class="fas fa-chart-bar mr-3"></i>Reports
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-    </nav>
 
     <!-- Messages -->
     {% if messages %}
@@ -443,69 +257,90 @@
     <!-- Main Layout with Sidebar -->
     {% if user.is_authenticated %}
     <div class="flex min-h-screen bg-gray-50">
-        <!-- Sidebar -->
-        <div class="hidden lg:flex lg:flex-shrink-0">
-            <div class="flex flex-col w-64">
-                <div class="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
-                    <div class="flex items-center flex-shrink-0 px-4">
+        <!-- Mobile sidebar overlay -->
+        <div id="sidebar-overlay" class="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 hidden lg:hidden"></div>
+
+        <!-- Sidebar (responsive for both desktop and mobile) -->
+        <div id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-slate-800 to-slate-900 transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 lg:flex lg:flex-shrink-0">
+            <div class="flex flex-col w-64 h-full">
+                <div class="flex flex-col h-full bg-gradient-to-b from-slate-800 to-slate-900 border-r border-slate-700">
+                    <!-- Fixed Header -->
+                    <div class="flex items-center justify-between flex-shrink-0 px-4 py-5 border-b border-slate-700">
                         <div class="flex items-center space-x-3">
-                            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-book-open text-white text-sm"></i>
-                            </div>
+                            {% if library_settings.library_logo %}
+                                {% load library_settings_tags %}
+                                <img src="{% safe_cloudinary_url library_settings.library_logo width=32 height=32 crop='fill' %}"
+                                     alt="{{ library_settings.library_name }} Logo"
+                                     class="w-8 h-8 rounded-lg object-cover">
+                            {% else %}
+                                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-book-open text-white text-sm"></i>
+                                </div>
+                            {% endif %}
                             <div>
-                                <h2 class="text-lg font-semibold text-gray-900">LibraryPro</h2>
-                                <p class="text-xs text-gray-500">Management System</p>
+                                <h2 class="text-lg font-semibold text-white">{{ library_settings.library_name|default:"LibraryPro"|truncatewords:2 }}</h2>
+                                <p class="text-xs text-slate-300">Management System</p>
                             </div>
                         </div>
+                        <!-- Mobile close button -->
+                        <button onclick="closeSidebar()" class="lg:hidden text-slate-400 hover:text-white p-2">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
                     </div>
 
-                    <!-- Navigation -->
-                    <nav class="mt-8 flex-1 px-2 space-y-1">
+                    <!-- Scrollable Navigation -->
+                    <nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
                         <!-- Dashboard -->
-                        <a href="{% url 'home' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'home' %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                        <a href="{% url 'home' %}" class="sidebar-item group flex items-center px-3 py-3 text-sm font-medium rounded-lg {% if request.resolver_match.url_name == 'home' %}bg-blue-600 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-all duration-200">
                             <i class="fas fa-home mr-3 text-lg"></i>
                             Dashboard
                         </a>
 
                         <!-- Books (moved to top for students) -->
-                        <a href="{% url 'book_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'book' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                        <a href="{% url 'book_list' %}" class="sidebar-item group flex items-center px-3 py-3 text-sm font-medium rounded-lg {% if 'book' in request.resolver_match.url_name %}bg-blue-600 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-all duration-200">
                             <i class="fas fa-books mr-3 text-lg"></i>
                             Books
                         </a>
 
                         {% if user.can_borrow_books %}
                         <!-- Student Dashboard -->
-                        <a href="{% url 'student_dashboard' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'student_dashboard' %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                        <a href="{% url 'student_dashboard' %}" class="sidebar-item group flex items-center px-3 py-3 text-sm font-medium rounded-lg {% if request.resolver_match.url_name == 'student_dashboard' %}bg-blue-600 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-all duration-200">
                             <i class="fas fa-user-graduate mr-3 text-lg"></i>
                             My Library
                         </a>
 
                         <!-- Student Quick Links Section -->
                         <div class="mt-6">
-                            <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">My Account</h3>
+                            <h3 class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">My Account</h3>
                             <div class="mt-2 space-y-1">
                                 <!-- My Profile -->
-                                <a href="{% url 'profile' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'profile' %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'profile' %}" class="sidebar-item group flex items-center px-3 py-3 text-sm font-medium rounded-lg {% if request.resolver_match.url_name == 'profile' %}bg-blue-600 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-all duration-200">
                                     <i class="fas fa-user mr-3 text-lg"></i>
                                     My Profile
                                 </a>
 
                                 <!-- My Loans -->
-                                <a href="{% url 'my_loans' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'my_loans' %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'my_loans' %}" class="sidebar-item group flex items-center px-3 py-3 text-sm font-medium rounded-lg {% if request.resolver_match.url_name == 'my_loans' %}bg-blue-600 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-all duration-200">
                                     <i class="fas fa-book-reader mr-3 text-lg"></i>
                                     My Loans
                                 </a>
 
                                 <!-- My Reservations -->
-                                <a href="{% url 'my_reservations' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'my_reservations' %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'my_reservations' %}" class="sidebar-item group flex items-center px-3 py-3 text-sm font-medium rounded-lg {% if request.resolver_match.url_name == 'my_reservations' %}bg-blue-600 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-all duration-200">
                                     <i class="fas fa-bookmark mr-3 text-lg"></i>
                                     My Reservations
                                 </a>
 
                                 <!-- Pending Requests -->
-                                <a href="{% url 'my_pending_requests' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'my_pending_requests' %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'my_pending_requests' %}" class="sidebar-item group flex items-center px-3 py-3 text-sm font-medium rounded-lg {% if request.resolver_match.url_name == 'my_pending_requests' %}bg-blue-600 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-all duration-200">
                                     <i class="fas fa-clock mr-3 text-lg"></i>
                                     Pending Requests
+                                </a>
+
+                                <!-- Reading History -->
+                                <a href="{% url 'reading_history' %}" class="sidebar-item group flex items-center px-3 py-3 text-sm font-medium rounded-lg {% if 'reading_history' in request.resolver_match.url_name %}bg-blue-600 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %} transition-all duration-200">
+                                    <i class="fas fa-history mr-3 text-lg"></i>
+                                    Reading History
                                 </a>
                             </div>
                         </div>
@@ -514,16 +349,16 @@
                         {% if user.can_manage_books %}
                         <!-- Loan Management Section -->
                         <div class="mt-6">
-                            <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Loan Management</h3>
+                            <h3 class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Loan Management</h3>
                             <div class="mt-2 space-y-1">
                                 <!-- Loans -->
-                                <a href="{% url 'loan_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'loan' in request.resolver_match.url_name and 'overdue' not in request.resolver_match.url_name and 'due-soon' not in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'loan_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'loan' in request.resolver_match.url_name and 'overdue' not in request.resolver_match.url_name and 'due-soon' not in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <i class="fas fa-hand-holding mr-3 text-lg"></i>
                                     All Loans
                                 </a>
 
                                 <!-- Pending Requests -->
-                                <a href="{% url 'pending_requests' %}" class="sidebar-item group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'pending_requests' %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'pending_requests' %}" class="sidebar-item group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'pending_requests' %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <div class="flex items-center">
                                         <i class="fas fa-clock mr-3 text-lg"></i>
                                         Pending Requests
@@ -534,7 +369,7 @@
                                 </a>
 
                                 <!-- Overdue Books -->
-                                <a href="{% url 'overdue_loans' %}" class="sidebar-item group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'overdue_loans' %}bg-red-100 text-red-700 border-r-2 border-red-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'overdue_loans' %}" class="sidebar-item group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'overdue_loans' %}bg-red-100 text-red-700 border-r-2 border-red-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <div class="flex items-center">
                                         <i class="fas fa-exclamation-triangle mr-3 text-lg"></i>
                                         Overdue Books
@@ -545,7 +380,7 @@
                                 </a>
 
                                 <!-- Due Soon -->
-                                <a href="{% url 'due_soon_loans' %}" class="sidebar-item group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'due_soon_loans' %}bg-yellow-100 text-yellow-700 border-r-2 border-yellow-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'due_soon_loans' %}" class="sidebar-item group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'due_soon_loans' %}bg-yellow-100 text-yellow-700 border-r-2 border-yellow-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <div class="flex items-center">
                                         <i class="fas fa-clock mr-3 text-lg"></i>
                                         Due Soon
@@ -556,7 +391,7 @@
                                 </a>
 
                                 <!-- Issue Loan -->
-                                <a href="{% url 'loan_create' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'loan_create' %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'loan_create' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if request.resolver_match.url_name == 'loan_create' %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <i class="fas fa-plus-circle mr-3 text-lg"></i>
                                     Issue Loan
                                 </a>
@@ -565,40 +400,40 @@
 
                         <!-- Library Management Section -->
                         <div class="mt-6">
-                            <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Library Management</h3>
+                            <h3 class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Library Management</h3>
                             <div class="mt-2 space-y-1">
                                 <!-- Authors -->
-                                <a href="{% url 'author_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'author' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'author_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'author' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <i class="fas fa-user-edit mr-3 text-lg"></i>
                                     Authors
                                 </a>
 
                                 <!-- Categories -->
-                                <a href="{% url 'category_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'category' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'category_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'category' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <i class="fas fa-tags mr-3 text-lg"></i>
                                     Categories
                                 </a>
 
                                 <!-- Publishers -->
-                                <a href="{% url 'publisher_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'publisher' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'publisher_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'publisher' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <i class="fas fa-building mr-3 text-lg"></i>
                                     Publishers
                                 </a>
 
                                 <!-- Sections -->
-                                <a href="{% url 'section_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'section' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'section_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'section' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <i class="fas fa-layer-group mr-3 text-lg"></i>
                                     Sections
                                 </a>
 
                                 <!-- Shelf Locations -->
-                                <a href="{% url 'shelf_location_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'shelf' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'shelf_location_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'shelf' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <i class="fas fa-map-marker-alt mr-3 text-lg"></i>
                                     Shelf Locations
                                 </a>
 
                                 <!-- Floors -->
-                                <a href="{% url 'floor_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'floor' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'floor_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'floor' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <i class="fas fa-building mr-3 text-lg"></i>
                                     Floors
                                 </a>
@@ -607,32 +442,38 @@
 
                         <!-- Reports Section -->
                         <div class="mt-6">
-                            <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Reports & Analytics</h3>
+                            <h3 class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Reports & Analytics</h3>
                             <div class="mt-2 space-y-1">
                                 <!-- Reports -->
-                                <a href="{% url 'reports_dashboard' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'report' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                                <a href="{% url 'reports_dashboard' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'report' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                                     <i class="fas fa-chart-bar mr-3 text-lg"></i>
                                     Reports Dashboard
+                                </a>
+
+                                <!-- Reading History & Leaderboard -->
+                                <a href="{% url 'admin_reading_history' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'admin_reading_history' in request.resolver_match.url_name or 'student_reading_detail' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
+                                    <i class="fas fa-trophy mr-3 text-lg"></i>
+                                    Reading Leaderboard
                                 </a>
                             </div>
                         </div>
                         {% endif %}
 
                         <!-- Search -->
-                        <a href="{% url 'advanced_search' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'search' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                        <a href="{% url 'advanced_search' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'search' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                             <i class="fas fa-search mr-3 text-lg"></i>
                             Advanced Search
                         </a>
 
                         {% if user.can_manage_users %}
                         <!-- Users -->
-                        <a href="{% url 'user_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'user' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                        <a href="{% url 'user_list' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'user' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                             <i class="fas fa-users mr-3 text-lg"></i>
                             User Management
                         </a>
 
                         <!-- Settings -->
-                        <a href="{% url 'library_settings' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'settings' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                        <a href="{% url 'library_settings' %}" class="sidebar-item group flex items-center px-2 py-2 text-sm font-medium rounded-md {% if 'settings' in request.resolver_match.url_name %}bg-blue-100 text-blue-700 border-r-2 border-blue-700{% else %}text-gray-200 hover:bg-gray-700 hover:text-white{% endif %}">
                             <i class="fas fa-cog mr-3 text-lg"></i>
                             Library Settings
                         </a>
@@ -680,70 +521,183 @@
             </div>
         </div>
 
+
+
         <!-- Main content -->
         <div class="flex flex-col w-0 flex-1 overflow-hidden">
-            <!-- Top navigation -->
-            <div class="relative z-10 flex-shrink-0 flex h-16 bg-white shadow">
-                <button class="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 lg:hidden" onclick="toggleSidebar()">
-                    <i class="fas fa-bars text-lg"></i>
+            <!-- Top navigation - Mobile First -->
+            <div class="relative z-10 flex-shrink-0 flex h-16 bg-gradient-to-r from-blue-600 to-purple-700 shadow-lg">
+                <!-- Mobile menu button -->
+                <button class="px-4 border-r border-white/20 text-white/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/50 lg:hidden transition-colors duration-200" onclick="toggleSidebar()">
+                    <i class="fas fa-bars text-xl"></i>
                 </button>
-                <div class="flex-1 px-4 flex justify-between">
-                    <div class="flex-1 flex">
-                        <div class="w-full flex md:ml-0">
-                            <form action="{% url 'advanced_search' %}" method="get" class="relative w-full text-gray-400 focus-within:text-gray-600">
-                                <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                                    <i class="fas fa-search text-lg"></i>
-                                </div>
-                                <input id="search-field"
-                                       name="query"
-                                       class="block w-full h-full pl-8 pr-3 py-2 border-transparent text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent"
-                                       placeholder="Search books, users, loans..."
-                                       type="search">
-                            </form>
+
+                <!-- Main navbar content -->
+                <div class="flex-1 px-3 sm:px-4 flex justify-between items-center">
+                    <!-- Responsive Search bar -->
+                    <div class="flex-1 max-w-lg mr-4 relative">
+                        <form action="{% url 'advanced_search' %}" method="get" class="relative" id="navbar-search-form">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
+                                <i class="fas fa-search text-gray-500 text-sm"></i>
+                            </div>
+                            <input id="search-field"
+                                   name="query"
+                                   class="block w-full pl-10 pr-3 py-2 border border-white/30 rounded-lg text-sm text-gray-900 placeholder-gray-500 bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 focus:bg-white transition-all duration-200"
+                                   placeholder="Search books, users..."
+                                   type="text"
+                                   autocomplete="off"
+                                   tabindex="0">
+                        </form>
+                        <!-- Live Search Results -->
+                        <div id="search-results" class="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden max-h-96 overflow-y-auto">
+                            <!-- Results will be populated here -->
                         </div>
                     </div>
-                    <div class="ml-4 flex items-center md:ml-6">
-                        <!-- Notifications -->
-                        <div class="relative">
-                            <button id="notifications-btn" class="bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 relative">
-                                <i class="fas fa-bell text-lg"></i>
-                                <span id="notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
+
+                    <!-- Right side icons -->
+                    <div class="flex items-center space-x-2 sm:space-x-4">
+                        <!-- Unified Notifications -->
+                        <div class="relative group">
+                            <button id="notifications-btn" class="bg-white/10 hover:bg-white/20 p-2 rounded-full text-white/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50 relative transition-all duration-200">
+                                <i class="fas fa-bell text-lg sm:text-xl"></i>
+                                <span id="notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center {% if total_notifications == 0 %}hidden{% endif %} font-medium">{{ total_notifications|default:0 }}</span>
                             </button>
 
-                            <!-- Notifications Dropdown -->
-                            <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                                <div class="p-4 border-b border-gray-200">
+                            <!-- Comprehensive Notifications Dropdown -->
+                            <div id="notifications-dropdown" class="opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 absolute right-0 mt-2 w-72 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-w-[calc(100vw-1rem)] sm:max-w-none">
+                                <div class="p-3 sm:p-4 border-b border-gray-200">
                                     <div class="flex items-center justify-between">
-                                        <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
-                                        <button id="mark-all-read-btn" class="text-sm text-blue-600 hover:text-blue-800">Mark all read</button>
+                                        <h3 class="text-base sm:text-lg font-semibold text-gray-900 flex items-center">
+                                            <i class="fas fa-bell mr-1 sm:mr-2 text-blue-600 text-sm sm:text-base"></i>
+                                            <span class="hidden sm:inline">Notifications</span>
+                                            <span class="sm:hidden">Alerts</span>
+                                        </h3>
+                                        <button id="mark-all-read-btn" onclick="markAllNotificationsRead()" class="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium">Mark all read</button>
                                     </div>
                                 </div>
-                                <div id="notification-list" class="max-h-96 overflow-y-auto">
-                                    <!-- Notifications will be loaded here -->
+
+                                <!-- Admin Notifications Section -->
+                                {% if user.role == 'librarian' or user.role == 'admin' or user.is_superuser %}
+                                <div class="border-b border-gray-200">
+                                    <div class="p-2 sm:p-3 bg-blue-50">
+                                        <h4 class="text-xs sm:text-sm font-semibold text-blue-900 flex items-center">
+                                            <i class="fas fa-tasks mr-1 sm:mr-2 text-xs sm:text-sm"></i>
+                                            <span class="hidden sm:inline">Admin Tasks</span>
+                                            <span class="sm:hidden">Tasks</span>
+                                        </h4>
+                                    </div>
+                                    <div class="p-2 space-y-1">
+                                        {% if pending_requests_count > 0 %}
+                                        <a href="{% url 'pending_requests' %}" class="block p-2 sm:p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200">
+                                            <div class="flex items-center">
+                                                <div class="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2 sm:mr-3">
+                                                    <i class="fas fa-clock text-blue-600 text-xs sm:text-sm"></i>
+                                                </div>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-xs sm:text-sm font-medium text-gray-900 truncate">{{ pending_requests_count }} Pending Request{{ pending_requests_count|pluralize }}</p>
+                                                    <p class="text-xs text-gray-500 hidden sm:block">Students waiting for approval</p>
+                                                </div>
+                                                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full">{{ pending_requests_count }}</span>
+                                            </div>
+                                        </a>
+                                        {% endif %}
+
+                                        {% if overdue_loans_count > 0 %}
+                                        <a href="{% url 'overdue_loans' %}" class="block p-2 sm:p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200">
+                                            <div class="flex items-center">
+                                                <div class="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center mr-2 sm:mr-3">
+                                                    <i class="fas fa-exclamation-triangle text-red-600 text-xs sm:text-sm"></i>
+                                                </div>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-xs sm:text-sm font-medium text-gray-900 truncate">{{ overdue_loans_count }} Overdue Book{{ overdue_loans_count|pluralize }}</p>
+                                                    <p class="text-xs text-gray-500 hidden sm:block">Immediate attention needed</p>
+                                                </div>
+                                                <span class="bg-red-100 text-red-800 text-xs font-medium px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full">{{ overdue_loans_count }}</span>
+                                            </div>
+                                        </a>
+                                        {% endif %}
+
+                                        {% if total_admin_notifications == 0 %}
+                                        <div class="p-2 sm:p-3 text-center">
+                                            <p class="text-xs sm:text-sm text-gray-500">No pending admin tasks</p>
+                                        </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                <div class="p-4 border-t border-gray-200">
-                                    <a href="{% url 'notifications_list' %}" class="text-sm text-blue-600 hover:text-blue-800">View all notifications</a>
+                                {% endif %}
+
+                                <!-- User Notifications Section -->
+                                <div>
+                                    <div class="p-2 sm:p-3 bg-green-50">
+                                        <h4 class="text-xs sm:text-sm font-semibold text-green-900 flex items-center">
+                                            <i class="fas fa-user mr-1 sm:mr-2 text-xs sm:text-sm"></i>
+                                            <span class="hidden sm:inline">My Notifications</span>
+                                            <span class="sm:hidden">Messages</span>
+                                        </h4>
+                                    </div>
+                                    <div id="notification-list" class="max-h-32 sm:max-h-64 overflow-y-auto">
+                                        <!-- User notifications will be loaded here -->
+                                    </div>
+                                </div>
+
+                                <div class="p-3 sm:p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                                    <div class="flex flex-col sm:flex-row justify-between gap-2">
+                                        <a href="{% url 'notifications_list' %}" class="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium text-center sm:text-left">View all notifications</a>
+                                        {% if user.role == 'librarian' or user.role == 'admin' or user.is_superuser %}
+                                        <a href="{% url 'reports_dashboard' %}" class="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium text-center sm:text-right">Admin Dashboard</a>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Profile dropdown -->
-                        <div class="ml-3 relative">
+                        <div class="relative">
                             <div class="relative group">
-                                <button class="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                                <button class="flex items-center space-x-2 bg-white/10 hover:bg-white/20 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-200">
+                                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
                                         {% if user.profile_picture %}
                                         <img src="{{ user.profile_picture.url }}" alt="Profile" class="w-8 h-8 rounded-full object-cover">
                                         {% else %}
-                                        <i class="fas fa-user text-gray-600 text-sm"></i>
+                                        <i class="fas fa-user text-white text-sm"></i>
                                         {% endif %}
                                     </div>
+                                    <!-- User name (hidden on mobile) -->
+                                    <div class="hidden sm:block text-left">
+                                        <p class="text-sm font-medium text-white">{{ user.get_full_name|truncatechars:15 }}</p>
+                                        <p class="text-xs text-white/70">{{ user.get_role_display }}</p>
+                                    </div>
+                                    <i class="fas fa-chevron-down text-white/70 text-xs hidden sm:block"></i>
                                 </button>
 
-                                <!-- Dropdown menu -->
-                                <div class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                                    <a href="{% url 'profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</a>
-                                    <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</a>
+                                <!-- Dropdown menu (styled like sidebar) -->
+                                <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-100">
+                                    <div class="p-3 border-b border-gray-100">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                                {% if user.profile_picture %}
+                                                <img src="{{ user.profile_picture.url }}" alt="Profile" class="w-10 h-10 rounded-full object-cover">
+                                                {% else %}
+                                                <i class="fas fa-user text-white"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-semibold text-gray-900">{{ user.get_full_name }}</p>
+                                                <p class="text-xs text-gray-500">{{ user.get_role_display }}</p>
+                                                <p class="text-xs text-blue-600">{{ user.email|truncatechars:25 }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="py-2">
+                                        <a href="{% url 'profile' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                                            <i class="fas fa-user-circle mr-3 text-gray-400"></i>
+                                            Your Profile
+                                        </a>
+                                        <a href="{% url 'logout' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                                            <i class="fas fa-sign-out-alt mr-3 text-gray-400"></i>
+                                            Sign out
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -776,12 +730,23 @@
                 <!-- Library Info -->
                 <div class="md:col-span-2">
                     <div class="flex items-center space-x-3 mb-4">
-                        <i class="fas fa-book-open text-2xl text-blue-400"></i>
-                        <h3 class="text-xl font-bold">LibraryPro</h3>
+                        {% if library_settings.library_logo %}
+                            {% load library_settings_tags %}
+                            <img src="{% safe_cloudinary_url library_settings.library_logo width=40 height=40 crop='fill' %}"
+                                 alt="{{ library_settings.library_name }} Logo"
+                                 class="w-10 h-10 rounded-lg object-cover">
+                        {% else %}
+                            <i class="fas fa-book-open text-2xl text-blue-400"></i>
+                        {% endif %}
+                        <h3 class="text-xl font-bold">{{ library_settings.library_name|default:"LibraryPro" }}</h3>
                     </div>
                     <p class="text-gray-300 mb-4">
-                        A comprehensive library management system designed for educational institutions.
-                        Manage books, users, loans, and reservations with ease.
+                        {% if library_settings.library_address %}
+                            {{ library_settings.library_address }}
+                        {% else %}
+                            A comprehensive library management system designed for Deigratia Montessori School.
+                            Manage books, users, loans, and reservations with ease.
+                        {% endif %}
                     </p>
                     <div class="flex space-x-4">
                         <a href="#" class="text-gray-400 hover:text-blue-400 transition-colors duration-200">
@@ -812,26 +777,37 @@
                 <div>
                     <h4 class="text-lg font-semibold mb-4">Contact</h4>
                     <ul class="space-y-2 text-gray-300">
+                        {% if library_settings.library_email %}
                         <li class="flex items-center">
                             <i class="fas fa-envelope mr-2 text-blue-400"></i>
-                            library@school.edu
+                            {{ library_settings.library_email }}
                         </li>
+                        {% endif %}
+                        {% if library_settings.library_phone %}
                         <li class="flex items-center">
                             <i class="fas fa-phone mr-2 text-blue-400"></i>
-                            +1 (555) 123-4567
+                            {{ library_settings.library_phone }}
                         </li>
+                        {% endif %}
+                        {% if library_settings.library_address %}
                         <li class="flex items-center">
                             <i class="fas fa-map-marker-alt mr-2 text-blue-400"></i>
-                            123 Education St, Learning City
+                            {{ library_settings.library_address|truncatewords:10 }}
                         </li>
+                        {% endif %}
+                        {% if not library_settings.library_email and not library_settings.library_phone and not library_settings.library_address %}
+                        <li class="flex items-center">
+                            <i class="fas fa-info-circle mr-2 text-blue-400"></i>
+                            Contact information not configured
+                        </li>
+                        {% endif %}
                     </ul>
                 </div>
             </div>
 
             <div class="border-t border-gray-700 mt-8 pt-8 text-center">
                 <p class="text-gray-400">
-                    &copy; 2024 LibraryPro Management System. All rights reserved.
-                    <span class="text-blue-400">Built with ❤️ for education</span>
+                    &copy; {% now "Y" %} {{ library_settings.library_name|default:"LibraryPro" }} Management System. All rights reserved.
                 </p>
             </div>
         </div>
@@ -916,8 +892,16 @@
             const badge = document.getElementById('notification-badge');
             const notificationList = document.getElementById('notification-list');
 
-            if (unreadCount > 0) {
-                badge.textContent = unreadCount;
+            // Calculate total notifications including admin notifications from template context
+            let totalNotifications = unreadCount;
+
+            // Add admin notifications count if available (from template context)
+            if (window.adminNotificationsCount) {
+                totalNotifications += window.adminNotificationsCount;
+            }
+
+            if (totalNotifications > 0) {
+                badge.textContent = totalNotifications;
                 badge.classList.remove('hidden');
             } else {
                 badge.classList.add('hidden');
@@ -925,24 +909,35 @@
 
             if (notifications.length > 0) {
                 notificationList.innerHTML = notifications.map(notification => `
-                    <div class="px-4 py-3 hover:bg-gray-50 border-b border-gray-100 cursor-pointer ${!notification.is_read ? 'bg-blue-50' : ''}"
-                         onclick="markNotificationRead(${notification.id})">
+                    <div class="px-3 sm:px-4 py-2 sm:py-3 hover:bg-gray-50 border-b border-gray-100 cursor-pointer ${!notification.is_read ? 'bg-blue-50' : ''}"
+                         onclick="markNotificationRead('${notification.id}')">
                         <div class="flex items-start">
                             <div class="flex-shrink-0">
-                                <div class="w-2 h-2 rounded-full ${getNotificationColor(notification.type)} mt-2"></div>
+                                <div class="w-2 h-2 rounded-full ${getNotificationColor(notification.notification_type)} mt-2"></div>
                             </div>
-                            <div class="ml-3 flex-1">
-                                <p class="text-sm font-medium text-gray-900">${notification.title}</p>
-                                <p class="text-sm text-gray-500">${notification.message}</p>
-                                <p class="text-xs text-gray-400 mt-1">${notification.time_ago}</p>
+                            <div class="ml-2 sm:ml-3 flex-1 min-w-0">
+                                <p class="text-xs sm:text-sm font-medium text-gray-900 truncate">${notification.title}</p>
+                                <p class="text-xs sm:text-sm text-gray-500 line-clamp-2">${notification.message}</p>
+                                <p class="text-xs text-gray-400 mt-1">${formatNotificationTime(notification.created_at)}</p>
                             </div>
-                            ${!notification.is_read ? '<div class="w-2 h-2 bg-blue-500 rounded-full"></div>' : ''}
+                            ${!notification.is_read ? '<div class="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>' : ''}
                         </div>
                     </div>
                 `).join('');
             } else {
-                notificationList.innerHTML = '<div class="px-4 py-3 text-sm text-gray-500 text-center">No notifications</div>';
+                notificationList.innerHTML = '<div class="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 text-center">No notifications</div>';
             }
+        }
+
+        function formatNotificationTime(isoString) {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+
+            if (diffInMinutes < 1) return 'Just now';
+            if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+            if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+            return `${Math.floor(diffInMinutes / 1440)}d ago`;
         }
 
         function getNotificationColor(type) {
@@ -1009,12 +1004,163 @@
             return cookieValue;
         }
 
-        // Load notifications on page load
+        // Toggle sidebar for mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            if (sidebar && overlay) {
+                const isHidden = sidebar.classList.contains('-translate-x-full');
+
+                if (isHidden) {
+                    // Show sidebar
+                    sidebar.classList.remove('-translate-x-full');
+                    overlay.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    // Hide sidebar
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+            }
+        }
+
+        // Close sidebar when clicking overlay
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            if (sidebar && overlay) {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Live Search Functionality
+        let searchTimeout;
+        function setupLiveSearch() {
+            const searchField = document.getElementById('search-field');
+            const searchResults = document.getElementById('search-results');
+
+            if (searchField && searchResults) {
+                searchField.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    const query = this.value.trim();
+
+                    if (query.length >= 2) {
+                        searchTimeout = setTimeout(() => {
+                            performLiveSearch(query);
+                        }, 300);
+                    } else {
+                        searchResults.classList.add('hidden');
+                    }
+                });
+
+                // Hide results when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!searchField.contains(e.target) && !searchResults.contains(e.target)) {
+                        searchResults.classList.add('hidden');
+                    }
+                });
+            }
+        }
+
+        function performLiveSearch(query) {
+            const searchResults = document.getElementById('search-results');
+
+            fetch(`/api/live-search/?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    displaySearchResults(data);
+                    searchResults.classList.remove('hidden');
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                });
+        }
+
+        function displaySearchResults(data) {
+            const searchResults = document.getElementById('search-results');
+
+            if (data.books.length === 0 && data.users.length === 0) {
+                searchResults.innerHTML = '<div class="p-4 text-center text-gray-500">No results found</div>';
+                return;
+            }
+
+            let html = '';
+
+            if (data.books.length > 0) {
+                html += '<div class="p-3 border-b border-gray-200"><h4 class="font-semibold text-gray-900 text-sm">Books</h4></div>';
+                data.books.forEach(book => {
+                    html += `
+                        <a href="/books/${book.id}/" class="block p-3 hover:bg-gray-50 transition-colors duration-200">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-blue-100 rounded flex items-center justify-center mr-3">
+                                    <i class="fas fa-book text-blue-600 text-sm"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">${book.title}</p>
+                                    <p class="text-xs text-gray-500">by ${book.authors}</p>
+                                </div>
+                                <span class="text-xs px-2 py-1 rounded-full ${book.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${book.available ? 'Available' : 'Borrowed'}
+                                </span>
+                            </div>
+                        </a>
+                    `;
+                });
+            }
+
+            if (data.users.length > 0 && (window.userRole === 'admin' || window.userRole === 'librarian')) {
+                html += '<div class="p-3 border-b border-gray-200"><h4 class="font-semibold text-gray-900 text-sm">Users</h4></div>';
+                data.users.forEach(user => {
+                    html += `
+                        <a href="/users/${user.id}/" class="block p-3 hover:bg-gray-50 transition-colors duration-200">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-green-100 rounded flex items-center justify-center mr-3">
+                                    <i class="fas fa-user text-green-600 text-sm"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">${user.name}</p>
+                                    <p class="text-xs text-gray-500">${user.role} - ${user.email}</p>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                });
+            }
+
+            searchResults.innerHTML = html;
+        }
+
+        // Set global variables for JavaScript
+        window.adminNotificationsCount = {{ total_admin_notifications|default:0 }};
+        window.userRole = '{{ user.role|default:"" }}';
+
+        // Load notifications and setup event handlers on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadNotifications();
+            setupLiveSearch();
+
+            // Ensure search field is working properly
+            const searchField = document.getElementById('search-field');
+            if (searchField) {
+                // Ensure the search field is enabled and focusable
+                searchField.disabled = false;
+                searchField.readOnly = false;
+                searchField.style.pointerEvents = 'auto';
+            }
 
             // Refresh notifications every 2 minutes
             setInterval(loadNotifications, 120000);
+
+            // Add click handler for sidebar overlay
+            const overlay = document.getElementById('sidebar-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', closeSidebar);
+            }
         });
     </script>
 

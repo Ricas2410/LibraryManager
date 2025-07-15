@@ -3,69 +3,72 @@
 {% block title %}My Profile - LibraryPro{% endblock %}
 
 {% block content %}
-<div class="space-y-8 animate-fade-in">
+<div class="space-y-6 sm:space-y-8 animate-fade-in px-4 sm:px-0">
     <!-- Profile Header -->
-    <div class="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl shadow-2xl">
+    <div class="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl sm:rounded-3xl shadow-2xl">
         <div class="absolute inset-0 bg-black/20"></div>
-        <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
-        <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
-        
-        <div class="relative px-8 py-12">
+        <div class="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-white/10 rounded-full -translate-y-16 translate-x-16 sm:-translate-y-32 sm:translate-x-32"></div>
+        <div class="absolute bottom-0 left-0 w-24 h-24 sm:w-48 sm:h-48 bg-white/5 rounded-full translate-y-12 -translate-x-12 sm:translate-y-24 sm:-translate-x-24"></div>
+
+        <div class="relative px-4 py-8 sm:px-8 sm:py-12">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                <div class="flex items-center space-x-6">
+                <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 text-center sm:text-left">
                     <div class="relative">
-                        <div class="w-24 h-24 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                        <div class="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 rounded-xl sm:rounded-2xl flex items-center justify-center backdrop-blur-sm">
                             {% if user.profile_picture %}
-                            <img src="{{ user.profile_picture.url }}" alt="Profile" class="w-24 h-24 rounded-2xl object-cover">
+                            <img src="{{ user.profile_picture.url }}" alt="Profile" class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl object-cover">
                             {% else %}
-                            <i class="fas fa-user text-4xl text-white"></i>
+                            <i class="fas fa-user text-3xl sm:text-4xl text-white"></i>
                             {% endif %}
                         </div>
-                        <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
+                        <div class="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 bg-green-500 rounded-full border-2 sm:border-4 border-white flex items-center justify-center">
                             <i class="fas fa-check text-white text-xs"></i>
                         </div>
                     </div>
                     <div>
-                        <h1 class="text-4xl font-bold text-white mb-2">
+                        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
                             {{ user.get_full_name|default:user.username }}
                         </h1>
-                        <div class="flex flex-wrap items-center gap-3 mb-3">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/20 text-white backdrop-blur-sm">
-                                <i class="fas fa-user-tag mr-2"></i>{{ user.get_role_display }}
+                        <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 mb-3">
+                            <span class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium bg-white/20 text-white backdrop-blur-sm">
+                                <i class="fas fa-user-tag mr-1 sm:mr-2"></i>{{ user.get_role_display }}
                             </span>
                             {% if user.enrollment_number %}
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/20 text-white backdrop-blur-sm">
-                                <i class="fas fa-id-card mr-2"></i>{{ user.enrollment_number }}
+                            <span class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium bg-white/20 text-white backdrop-blur-sm">
+                                <i class="fas fa-id-card mr-1 sm:mr-2"></i>{{ user.enrollment_number }}
                             </span>
                             {% endif %}
                             {% if user.class_grade %}
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/20 text-white backdrop-blur-sm">
-                                <i class="fas fa-graduation-cap mr-2"></i>{{ user.class_grade }}
+                            <span class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium bg-white/20 text-white backdrop-blur-sm">
+                                <i class="fas fa-graduation-cap mr-1 sm:mr-2"></i>{{ user.class_grade }}
                             </span>
                             {% endif %}
                         </div>
-                        <p class="text-white/90 text-lg">
+                        <p class="text-white/90 text-sm sm:text-base lg:text-lg">
                             Member since {{ user.date_joined|date:"F Y" }}
                         </p>
                     </div>
                 </div>
-                
-                <div class="mt-6 lg:mt-0">
-                    <button onclick="toggleEditMode()" class="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 backdrop-blur-sm">
+
+                <div class="mt-6 lg:mt-0 flex flex-col sm:flex-row gap-3">
+                    <button onclick="toggleEditMode()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-medium transition-all duration-300 backdrop-blur-sm text-sm sm:text-base">
                         <i class="fas fa-edit mr-2"></i>Edit Profile
+                    </button>
+                    <button onclick="togglePinChangeMode()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-medium transition-all duration-300 backdrop-blur-sm text-sm sm:text-base">
+                        <i class="fas fa-key mr-2"></i>Change PIN
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         <!-- Profile Information -->
-        <div class="lg:col-span-2 space-y-8">
+        <div class="lg:col-span-2 space-y-6 sm:space-y-8">
             <!-- Personal Information -->
-            <div class="bg-white rounded-2xl shadow-xl p-8">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                    <i class="fas fa-user-circle text-blue-600 mr-3"></i>
+            <div class="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center">
+                    <i class="fas fa-user-circle text-blue-600 mr-2 sm:mr-3"></i>
                     Personal Information
                 </h2>
                 
@@ -178,46 +181,102 @@
                     </form>
                 </div>
             </div>
+
+            <!-- PIN Change Section -->
+            <div id="pinChangeSection" class="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 hidden">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center">
+                    <i class="fas fa-key text-green-600 mr-2 sm:mr-3"></i>
+                    Change PIN/Password
+                </h2>
+
+                <div id="pinChangeForm">
+                    <form id="changePinForm" class="space-y-4 sm:space-y-6">
+                        {% csrf_token %}
+
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
+                                <div>
+                                    <h4 class="font-medium text-blue-900 mb-1">Change Your PIN/Password</h4>
+                                    <p class="text-sm text-blue-700">
+                                        Enter your current PIN and choose a new one. Your PIN should be at least 4 characters long.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Current PIN</label>
+                                <input type="password" id="currentPin" name="current_pin" required
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                                       placeholder="Enter current PIN">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">New PIN</label>
+                                <input type="password" id="newPin" name="new_pin" required
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                                       placeholder="Enter new PIN">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New PIN</label>
+                                <input type="password" id="confirmPin" name="confirm_pin" required
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                                       placeholder="Confirm new PIN">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
+                            <button type="button" onclick="togglePinChangeMode()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300">
+                                Cancel
+                            </button>
+                            <button type="submit" id="changePinBtn" onclick="handlePinChange(event)" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300">
+                                <i class="fas fa-key mr-2"></i><span id="changePinText">Change PIN</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
         <!-- Activity Summary -->
-        <div class="space-y-8">
+        <div class="space-y-6 sm:space-y-8">
             <!-- Quick Stats -->
-            <div class="bg-white rounded-2xl shadow-xl p-6">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <div class="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6">
+                <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-4 flex items-center">
                     <i class="fas fa-chart-bar text-green-600 mr-2"></i>
                     My Activity
                 </h3>
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
-                        <span class="text-blue-800 font-medium">Current Loans</span>
-                        <span class="text-2xl font-bold text-blue-600">{{ loans.count }}</span>
+                <div class="space-y-3 sm:space-y-4">
+                    <div class="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                        <span class="text-blue-800 font-medium text-sm sm:text-base">Current Loans</span>
+                        <span class="text-xl sm:text-2xl font-bold text-blue-600">{{ loans.count }}</span>
                     </div>
-                    <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-xl">
-                        <span class="text-yellow-800 font-medium">Reservations</span>
-                        <span class="text-2xl font-bold text-yellow-600">{{ reservations.count }}</span>
+                    <div class="flex justify-between items-center p-3 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl border border-yellow-200">
+                        <span class="text-yellow-800 font-medium text-sm sm:text-base">Reservations</span>
+                        <span class="text-xl sm:text-2xl font-bold text-yellow-600">{{ reservations.count }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Recent Loans -->
             {% if loans %}
-            <div class="bg-white rounded-2xl shadow-xl p-6">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <div class="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6">
+                <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-4 flex items-center">
                     <i class="fas fa-history text-purple-600 mr-2"></i>
                     Recent Loans
                 </h3>
                 <div class="space-y-3">
                     {% for loan in loans %}
-                    <div class="flex items-center p-3 bg-gray-50 rounded-xl">
-                        <div class="w-10 h-12 bg-gray-200 rounded-lg flex items-center justify-center mr-3">
-                            <i class="fas fa-book text-gray-400 text-sm"></i>
+                    <div class="flex items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200">
+                        <div class="w-8 h-10 sm:w-10 sm:h-12 bg-gray-200 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-book text-gray-400 text-xs sm:text-sm"></i>
                         </div>
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-900 text-sm">{{ loan.book.title|truncatechars:30 }}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium text-gray-900 text-xs sm:text-sm truncate">{{ loan.book.title }}</div>
                             <div class="text-xs text-gray-500">Due: {{ loan.due_date|date:"M d" }}</div>
                         </div>
-                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ml-2
                             {% if loan.status == 'active' %}bg-blue-100 text-blue-800
                             {% elif loan.status == 'overdue' %}bg-red-100 text-red-800
                             {% else %}bg-green-100 text-green-800{% endif %}">
@@ -236,6 +295,7 @@
 function toggleEditMode() {
     const profileView = document.getElementById('profileView');
     const profileEdit = document.getElementById('profileEdit');
+    const pinChangeSection = document.getElementById('pinChangeSection');
 
     if (profileView.classList.contains('hidden')) {
         profileView.classList.remove('hidden');
@@ -244,16 +304,177 @@ function toggleEditMode() {
         profileView.classList.add('hidden');
         profileEdit.classList.remove('hidden');
     }
+
+    // Hide PIN change section when editing profile
+    pinChangeSection.classList.add('hidden');
+}
+
+function togglePinChangeMode() {
+    const profileView = document.getElementById('profileView');
+    const profileEdit = document.getElementById('profileEdit');
+    const pinChangeSection = document.getElementById('pinChangeSection');
+
+    if (pinChangeSection.classList.contains('hidden')) {
+        pinChangeSection.classList.remove('hidden');
+        profileView.classList.add('hidden');
+        profileEdit.classList.add('hidden');
+    } else {
+        pinChangeSection.classList.add('hidden');
+        profileView.classList.remove('hidden');
+        profileEdit.classList.add('hidden');
+    }
+}
+
+// Removed sendVerificationCode function - no longer needed for PIN change
+
+function showMessage(message, type) {
+    // Remove existing messages
+    const existingMessages = document.querySelectorAll('.profile-message');
+    existingMessages.forEach(msg => msg.remove());
+
+    // Create new message
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `profile-message mb-4 p-4 rounded-xl ${type === 'success' ? 'bg-green-100 border border-green-400 text-green-700' : 'bg-red-100 border border-red-400 text-red-700'}`;
+    messageDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-3"></i>
+            ${message}
+        </div>
+    `;
+
+    // Insert at top of PIN change form
+    const pinChangeForm = document.getElementById('pinChangeForm');
+    if (pinChangeForm) {
+        pinChangeForm.insertBefore(messageDiv, pinChangeForm.firstChild);
+    } else {
+        // Fallback: insert at top of PIN change section
+        const pinChangeSection = document.getElementById('pinChangeSection');
+        if (pinChangeSection) {
+            const firstFormElement = pinChangeSection.querySelector('form, .space-y-4, .space-y-6');
+            if (firstFormElement) {
+                pinChangeSection.insertBefore(messageDiv, firstFormElement);
+            } else {
+                pinChangeSection.appendChild(messageDiv);
+            }
+        }
+    }
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (messageDiv && messageDiv.parentNode) {
+            messageDiv.remove();
+        }
+    }, 5000);
+}
+
+function handlePinChange(event) {
+    console.log('PIN change button clicked!');
+    event.preventDefault();
+
+    const currentPin = document.getElementById('currentPin').value;
+    const newPin = document.getElementById('newPin').value;
+    const confirmPin = document.getElementById('confirmPin').value;
+
+    console.log('Form values:', {
+        currentPin: currentPin ? 'Provided' : 'Empty',
+        newPin: newPin ? 'Provided' : 'Empty',
+        confirmPin: confirmPin ? 'Provided' : 'Empty'
+    });
+
+    // Validation
+    if (!currentPin || !newPin || !confirmPin) {
+        alert('Please fill in all fields');
+        return false;
+    }
+
+    if (newPin !== confirmPin) {
+        alert('New PIN and confirmation do not match');
+        return false;
+    }
+
+    if (newPin.length < 4) {
+        alert('PIN must be at least 4 characters long');
+        return false;
+    }
+
+    const changePinBtn = document.getElementById('changePinBtn');
+    const changePinText = document.getElementById('changePinText');
+
+    // Show loading state
+    changePinBtn.disabled = true;
+    changePinText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Changing PIN...';
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        alert('CSRF token not found. Please refresh the page.');
+        changePinBtn.disabled = false;
+        changePinText.innerHTML = '<i class="fas fa-key mr-2"></i>Change PIN';
+        return false;
+    }
+
+    console.log('Sending PIN change request...');
+
+    // Submit PIN change request
+    fetch('/change-pin/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken.value
+        },
+        body: JSON.stringify({
+            'current_pin': currentPin,
+            'new_pin': newPin
+        })
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        changePinBtn.disabled = false;
+        changePinText.innerHTML = '<i class="fas fa-key mr-2"></i>Change PIN';
+
+        if (data.success) {
+            alert('PIN changed successfully!');
+            // Clear form
+            document.getElementById('changePinForm').reset();
+            // Hide PIN change section after 2 seconds
+            setTimeout(() => {
+                togglePinChangeMode();
+            }, 2000);
+        } else {
+            alert('Error: ' + (data.message || 'Failed to change PIN'));
+        }
+    })
+    .catch(error => {
+        console.error('PIN change error:', error);
+        changePinBtn.disabled = false;
+        changePinText.innerHTML = '<i class="fas fa-key mr-2"></i>Change PIN';
+        alert('Error changing PIN: ' + error.message);
+    });
+
+    return false;
 }
 
 // Add form control classes to Django form fields
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Profile page JavaScript loaded');
+
+    // Test if PIN change form exists
+    const pinChangeForm = document.getElementById('changePinForm');
+    console.log('PIN change form found:', pinChangeForm ? 'Yes' : 'No');
+
+    // Test if PIN change button exists
+    const changePinBtn = document.getElementById('changePinBtn');
+    console.log('PIN change button found:', changePinBtn ? 'Yes' : 'No');
     const inputs = document.querySelectorAll('#profileEdit input, #profileEdit textarea, #profileEdit select');
     inputs.forEach(input => {
         input.classList.add('w-full', 'px-4', 'py-3', 'border', 'border-gray-300', 'rounded-xl', 'focus:ring-2', 'focus:ring-blue-500', 'focus:border-transparent', 'transition-all', 'duration-300');
     });
 
-    // Add form submission handling
+    // Add profile form submission handling
     const profileForm = document.querySelector('#profileEdit form');
     if (profileForm) {
         profileForm.addEventListener('submit', function(e) {
@@ -273,6 +494,92 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Allow form submission to proceed
             return true;
+        });
+    }
+
+    // Add PIN change form submission handling
+    const pinChangeForm = document.getElementById('changePinForm');
+    if (pinChangeForm) {
+        pinChangeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const currentPin = document.getElementById('currentPin').value;
+            const newPin = document.getElementById('newPin').value;
+            const confirmPin = document.getElementById('confirmPin').value;
+
+            // Validation
+            if (!currentPin || !newPin || !confirmPin) {
+                showMessage('Please fill in all fields', 'error');
+                return;
+            }
+
+            if (newPin !== confirmPin) {
+                showMessage('New PIN and confirmation do not match', 'error');
+                return;
+            }
+
+            if (newPin.length < 4) {
+                showMessage('PIN must be at least 4 characters long', 'error');
+                return;
+            }
+
+            const changePinBtn = document.getElementById('changePinBtn');
+            const changePinText = document.getElementById('changePinText');
+
+            // Show loading state
+            changePinBtn.disabled = true;
+            changePinText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Changing PIN...';
+
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (!csrfToken) {
+                showMessage('CSRF token not found. Please refresh the page.', 'error');
+                changePinBtn.disabled = false;
+                changePinText.innerHTML = '<i class="fas fa-key mr-2"></i>Change PIN';
+                return;
+            }
+
+            // Submit PIN change request
+            fetch('{% url "change_pin" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken.value
+                },
+                body: JSON.stringify({
+                    'current_pin': currentPin,
+                    'new_pin': newPin
+                })
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                changePinBtn.disabled = false;
+                changePinText.innerHTML = '<i class="fas fa-key mr-2"></i>Change PIN';
+
+                if (data.success) {
+                    showMessage('PIN changed successfully!', 'success');
+                    alert('PIN changed successfully!'); // Backup feedback
+                    // Clear form
+                    pinChangeForm.reset();
+                    // Hide PIN change section after 2 seconds
+                    setTimeout(() => {
+                        togglePinChangeMode();
+                    }, 2000);
+                } else {
+                    showMessage(data.message || 'Failed to change PIN', 'error');
+                    alert('Error: ' + (data.message || 'Failed to change PIN')); // Backup feedback
+                }
+            })
+            .catch(error => {
+                console.error('PIN change error:', error);
+                changePinBtn.disabled = false;
+                changePinText.innerHTML = '<i class="fas fa-key mr-2"></i>Change PIN';
+                showMessage('Error changing PIN: ' + error.message, 'error');
+            });
         });
     }
 });

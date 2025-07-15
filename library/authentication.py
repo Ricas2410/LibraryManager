@@ -222,25 +222,72 @@ class SchoolAPIAuthenticationBackend(BaseBackend):
 
 class LocalAuthenticationBackend(BaseBackend):
     """
-    Standard local authentication backend for library system users
+    Enhanced local authentication backend supporting email/ID + PIN login
     """
-    
+
     def authenticate(self, request, username=None, password=None, **kwargs):
         """
-        Authenticate user against local database
+        Authenticate user against local database with flexible login formats
+        Supports login with:
+        - Username + password
+        - Email (full or just username part) + password/PIN
+        - Student ID (full like STU1001 or just number like 1001) + PIN
         """
         if not username or not password:
             return None
-        
+
+        user = None
+        original_username = username.strip()
+
+        # Normalize the username for flexible matching
+        normalized_username = original_username.lower()
+
+        # Try different authentication methods
         try:
-            user = User.objects.get(username=username)
-            if user.check_password(password) and user.is_active_member:
-                return user
+            # Method 1: Direct username lookup
+            user = User.objects.get(username=normalized_username)
         except User.DoesNotExist:
-            pass
-        
+            try:
+                # Method 2: Email lookup (full email)
+                if '@' in original_username:
+                    user = User.objects.get(email__iexact=original_username)
+                else:
+                    # Method 2b: Email lookup (just username part - add domain)
+                    email_to_try = f"{normalized_username}@deigratiams.edu.gh"
+                    user = User.objects.get(email__iexact=email_to_try)
+            except User.DoesNotExist:
+                try:
+                    # Method 3: Student ID lookup (exact match)
+                    user = User.objects.get(enrollment_number__iexact=original_username)
+                except User.DoesNotExist:
+                    try:
+                        # Method 4: Flexible student ID lookup
+                        # Handle cases like: 1001 -> STU1001, stu1001 -> STU1001, etc.
+                        if original_username.isdigit():
+                            # Just numbers - try with STU prefix
+                            student_id_to_try = f"STU{original_username}"
+                            user = User.objects.get(enrollment_number__iexact=student_id_to_try)
+                        elif normalized_username.startswith('stu'):
+                            # Starts with stu - normalize to STU
+                            student_id_to_try = f"STU{original_username[3:]}"
+                            user = User.objects.get(enrollment_number__iexact=student_id_to_try)
+                        elif normalized_username.startswith('tch'):
+                            # Teacher ID
+                            student_id_to_try = f"TCH{original_username[3:]}"
+                            user = User.objects.get(enrollment_number__iexact=student_id_to_try)
+                        elif normalized_username.startswith('adm'):
+                            # Admin ID
+                            student_id_to_try = f"ADM{original_username[3:]}"
+                            user = User.objects.get(enrollment_number__iexact=student_id_to_try)
+                    except User.DoesNotExist:
+                        pass
+
+        # Verify password/PIN and active status
+        if user and user.check_password(password) and user.is_active_member:
+            return user
+
         return None
-    
+
     def get_user(self, user_id):
         """
         Get user by ID

@@ -1,98 +1,75 @@
 {% extends 'base.html' %}
+{% load library_extras %}
 
-{% block title %}Books - Library Management System{% endblock %}
+{% block title %}Books - {{ library_settings.library_name|default:"Library Management System" }}{% endblock %}
+
+{% block description %}Browse our digital library collection at {{ library_settings.library_name|default:"Library Management System" }}. Find books by subject, check availability, and manage your reading list.{% endblock %}
+
+{% block og_title %}Digital Library - {{ library_settings.library_name|default:"Library Management System" }}{% endblock %}
+{% block og_description %}Explore thousands of books in our digital library. Perfect for students and educators at Deigratia Montessori School.{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-800">Books</h1>
-            <p class="text-gray-600 mt-1">Manage your library collection</p>
-        </div>
-        <div class="flex items-center space-x-4">
-            <!-- View Toggle -->
-            <div class="flex items-center bg-gray-100 rounded-lg p-1">
-                <button onclick="toggleView('table')" id="table-view-btn"
-                        class="px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-white text-gray-900 shadow-sm">
-                    <i class="fas fa-list mr-2"></i>Table
-                </button>
-                <button onclick="toggleView('grid')" id="grid-view-btn"
-                        class="px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-500 hover:text-gray-900">
-                    <i class="fas fa-th-large mr-2"></i>Grid
-                </button>
-            </div>
-            {% if user.can_manage_books %}
-            <a href="{% url 'book_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-                <i class="fas fa-plus mr-2"></i>Add Book
-            </a>
-            {% endif %}
-        </div>
+    <!-- Header - Mobile First -->
+    <div class="text-center mb-6">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">📚 Library Books</h1>
+        <p class="text-gray-600 text-sm sm:text-base">Find your favorite books to read!</p>
     </div>
 
-    <!-- Search and Filters -->
-    <div class="bg-white rounded-2xl shadow-xl p-6">
-        <div class="mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Search & Filter Books</h3>
-            <p class="text-sm text-gray-600">Find books by title, author, ISBN, or filter by category and status</p>
-        </div>
+    <!-- Admin Actions (hidden on mobile for students) -->
+    {% if user.can_manage_books %}
+    <div class="hidden sm:flex justify-center space-x-3 mb-6">
+        <a href="{% url 'book_import_page' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center text-sm">
+            <i class="fas fa-file-import mr-2"></i>Import CSV
+        </a>
+        <a href="{% url 'book_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center text-sm">
+            <i class="fas fa-plus mr-2"></i>Add Book
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Quick Filters -->
+    <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">📚 Filter Books</h3>
         <form method="get" class="space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+
+
+            <!-- Simple Category Filter -->
+            <div class="grid grid-cols-2 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Search Books</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
-                            <i class="fas fa-search text-gray-400 text-sm"></i>
-                        </div>
-                        <input type="text"
-                               name="query"
-                               value="{{ request.GET.query|default:'' }}"
-                               placeholder="Search by title, author, ISBN..."
-                               class="w-full pr-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
-                               style="padding-left: 3rem;">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">📚 Subject</label>
                     <select name="category"
-                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
-                        <option value="">All Categories</option>
-                        <option value="fiction" {% if request.GET.category == 'fiction' %}selected{% endif %}>Fiction</option>
-                        <option value="non-fiction" {% if request.GET.category == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
-                        <option value="science" {% if request.GET.category == 'science' %}selected{% endif %}>Science</option>
-                        <option value="technology" {% if request.GET.category == 'technology' %}selected{% endif %}>Technology</option>
-                        <option value="history" {% if request.GET.category == 'history' %}selected{% endif %}>History</option>
-                        <option value="biography" {% if request.GET.category == 'biography' %}selected{% endif %}>Biography</option>
+                            class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
+                        <option value="">All Subjects</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
                     </select>
                 </div>
+
+                <!-- Only show availability for students -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select name="status"
-                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
-                        <option value="">All Status</option>
-                        <option value="available" {% if request.GET.status == 'available' %}selected{% endif %}>Available</option>
-                        <option value="borrowed" {% if request.GET.status == 'borrowed' %}selected{% endif %}>Borrowed</option>
-                        <option value="reserved" {% if request.GET.status == 'reserved' %}selected{% endif %}>Reserved</option>
-                        <option value="maintenance" {% if request.GET.status == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">📖 Availability</label>
+                    <select name="availability"
+                            class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
+                        <option value="">All Books</option>
+                        <option value="available" {% if request.GET.availability == 'available' %}selected{% endif %}>✅ Available Now</option>
+                        <option value="borrowed" {% if request.GET.availability == 'borrowed' %}selected{% endif %}>📚 Currently Borrowed</option>
                     </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Section</label>
-                    <input type="text"
-                           name="section"
-                           value="{{ request.GET.section|default:'' }}"
-                           placeholder="Enter section..."
-                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
                 </div>
             </div>
-            <div class="flex space-x-3 pt-2">
+            <div class="grid grid-cols-2 sm:flex sm:flex-row gap-3 pt-4">
                 <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
-                    <i class="fas fa-search mr-2"></i>Search
+                        onclick="submitForm(event)"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-sm">
+                    <i class="fas fa-filter mr-2"></i>Apply Filters
                 </button>
                 <a href="{% url 'book_list' %}"
-                   class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
-                    <i class="fas fa-times mr-2"></i>Clear
+                   onclick="clearFilters(event)"
+                   class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-sm text-center">
+                    <i class="fas fa-refresh mr-2"></i>Show All
                 </a>
             </div>
         </form>
@@ -123,7 +100,7 @@
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-16 w-12">
                                     {% if book.cover_image %}
-                                    <img class="h-16 w-12 object-cover rounded" src="{{ book.cover_image.url }}" alt="">
+                                    <img class="h-16 w-12 object-cover rounded" src="{{ book.cover_image|cloudinary_url }}" alt="">
                                     {% else %}
                                     <div class="h-16 w-12 bg-gray-200 rounded flex items-center justify-center">
                                         <i class="fas fa-book text-gray-400"></i>
@@ -205,7 +182,7 @@
                 <!-- Book Cover -->
                 <div class="aspect-w-3 aspect-h-4 mb-2 sm:mb-3 md:mb-4">
                     {% if book.cover_image %}
-                    <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="w-full h-32 sm:h-40 md:h-48 object-cover rounded">
+                    <img src="{{ book.cover_image|cloudinary_url }}" alt="{{ book.title }}" class="w-full h-32 sm:h-40 md:h-48 object-cover rounded">
                     {% else %}
                     <div class="w-full h-32 sm:h-40 md:h-48 bg-gray-200 rounded flex items-center justify-center">
                         <i class="fas fa-book text-2xl sm:text-3xl md:text-4xl text-gray-400"></i>
@@ -305,6 +282,21 @@
 </div>
 
 <script>
+// Form submission handlers
+function submitForm(event) {
+    console.log('Submitting form...');
+    const form = event.target.closest('form');
+    if (form) {
+        form.submit();
+    }
+}
+
+function clearFilters(event) {
+    event.preventDefault();
+    console.log('Clearing filters...');
+    window.location.href = "{% url 'book_list' %}";
+}
+
 function toggleView(viewType) {
     const tableView = document.getElementById('table-view');
     const gridView = document.getElementById('grid-view');
@@ -335,6 +327,10 @@ function toggleView(viewType) {
 document.addEventListener('DOMContentLoaded', function() {
     const savedView = localStorage.getItem('bookViewPreference') || 'grid';
     toggleView(savedView);
+
+    // Debug: Check if form exists
+    const form = document.querySelector('form');
+    console.log('Form found:', form);
 });
 </script>
 {% endblock %}

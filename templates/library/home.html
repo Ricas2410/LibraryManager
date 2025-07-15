@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard - LibraryPro{% endblock %}
+{% block title %}Dashboard - {{ library_settings.library_name|default:"LibraryPro" }}{% endblock %}
 
 {% block content %}
 <div class="space-y-8 animate-fade-in">

@@ -214,9 +214,11 @@ class BookForm(forms.ModelForm):
 
         if not book.available_copies:
             book.available_copies = book.total_copies
+
         if commit:
             book.save()
             self.save_m2m()
+
         return book
 
     def _handle_publisher(self):
@@ -386,6 +388,30 @@ class ReservationForm(forms.ModelForm):
 class LibrarySettingsForm(forms.ModelForm):
     """Form for library settings"""
     logo = forms.ImageField(required=False, help_text="Upload library logo")
+    banner = forms.ImageField(required=False, help_text="Upload login page banner image")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Map custom fields to model fields
+        if 'logo' not in self.data and self.instance and self.instance.library_logo:
+            self.fields['logo'].initial = self.instance.library_logo
+        if 'banner' not in self.data and self.instance and self.instance.login_banner:
+            self.fields['banner'].initial = self.instance.login_banner
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # Handle logo upload
+        if 'logo' in self.cleaned_data and self.cleaned_data['logo']:
+            instance.library_logo = self.cleaned_data['logo']
+
+        # Handle banner upload
+        if 'banner' in self.cleaned_data and self.cleaned_data['banner']:
+            instance.login_banner = self.cleaned_data['banner']
+
+        if commit:
+            instance.save()
+        return instance
 
     class Meta:
         model = LibrarySettings

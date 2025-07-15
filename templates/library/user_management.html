@@ -47,7 +47,7 @@
                 <p class="mt-1 text-sm text-gray-500">Create a single user account manually</p>
             </div>
             
-            <form method="post" action="{% url 'register' %}" class="divide-y divide-gray-200">
+            <form id="single-user-form" method="post" action="{% url 'register' %}" class="divide-y divide-gray-200">
                 {% csrf_token %}
                 
                 <!-- Account Information -->
@@ -176,10 +176,10 @@
                             class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                         Reset
                     </button>
-                    <button type="submit" 
+                    <button type="button" id="single-user-submit-btn" onclick="handleSingleUserSubmit()"
                             class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
                         <i class="fas fa-user-plus mr-2"></i>
-                        Create User
+                        <span id="single-user-submit-text">Create User</span>
                     </button>
                 </div>
             </form>
@@ -202,13 +202,26 @@
                             <i class="fas fa-info-circle text-blue-400 text-lg"></i>
                         </div>
                         <div class="ml-3">
-                            <h4 class="text-sm font-medium text-blue-800">CSV Format Requirements</h4>
+                            <h4 class="text-sm font-medium text-blue-800">Simple CSV Format - User Friendly</h4>
                             <div class="mt-2 text-sm text-blue-700">
-                                <p>Download the template file and fill in user information. Required columns:</p>
-                                <ul class="mt-1 list-disc list-inside">
-                                    <li>username, email, first_name, last_name, role</li>
-                                    <li>Optional: phone_number, date_of_birth, address, enrollment_number, class_grade</li>
+                                <p>Download the template file and fill in user information. <strong>Required columns:</strong></p>
+                                <ul class="mt-1 list-disc list-inside space-y-1">
+                                    <li><strong>first_name, last_name</strong> - Student's full name</li>
+                                    <li><strong>student_id</strong> - Just the number (e.g., 1001, 1002) or full ID (STU1001)</li>
+                                    <li><strong>role</strong> - student, teacher, librarian, or admin</li>
                                 </ul>
+                                <p class="mt-2"><strong>Optional columns:</strong> phone_number, address, class_grade, parent_email</p>
+                                <div class="mt-3 p-3 bg-green-50 rounded border-l-4 border-green-400">
+                                    <p class="text-green-800 text-xs mb-2">
+                                        <strong>Smart Email Generation:</strong> Emails created from names (e.g., Hellen Dyke → hdyke@deigratiams.edu.gh)
+                                    </p>
+                                    <p class="text-green-800 text-xs mb-2">
+                                        <strong>Default PIN:</strong> All users get PIN <strong>12345</strong> (changeable later)
+                                    </p>
+                                    <p class="text-green-800 text-xs">
+                                        <strong>Parent Notifications:</strong> If parent_email provided, parents receive welcome email with login details
+                                    </p>
+                                </div>
                             </div>
                             <div class="mt-3">
                                 <a href="{% url 'download_csv_template' %}" 
@@ -222,7 +235,7 @@
                 </div>
 
                 <!-- File Upload -->
-                <form method="post" action="{% url 'import_users_csv' %}" enctype="multipart/form-data">
+                <form method="post" action="{% url 'import_users_csv' %}" enctype="multipart/form-data" id="user-csv-form">
                     {% csrf_token %}
                     <div class="space-y-6">
                         <div>
@@ -233,9 +246,9 @@
                                 <div class="space-y-1 text-center">
                                     <i class="fas fa-file-csv text-4xl text-gray-400"></i>
                                     <div class="flex text-sm text-gray-600">
-                                        <label for="csv-file" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
+                                        <label for="user-csv-file" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
                                             <span>Upload a file</span>
-                                            <input id="csv-file" name="csv_file" type="file" accept=".csv" class="sr-only" required>
+                                            <input id="user-csv-file" name="csv_file" type="file" accept=".csv" class="sr-only" required>
                                         </label>
                                         <p class="pl-1">or drag and drop</p>
                                     </div>
@@ -244,8 +257,69 @@
                             </div>
                         </div>
 
+                        <!-- Progress Bar -->
+                        <div class="w-full" id="user-csv-progress-container" style="display:none;">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium text-gray-700">Uploading and processing users...</span>
+                                <span class="text-sm text-gray-500" id="user-csv-progress-text">0%</span>
+                            </div>
+                            <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500 ease-out" id="user-csv-progress-bar" style="width:0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- File Selection Display -->
+                        <div id="user-selected-file-info" class="hidden">
+                            <div class="flex items-center p-3 bg-gray-50 rounded-lg border">
+                                <i class="fas fa-file-csv text-green-500 mr-3"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900" id="user-selected-file-name"></p>
+                                    <p class="text-xs text-gray-500" id="user-selected-file-size"></p>
+                                </div>
+                                <button type="button" onclick="clearUserFileSelection()" class="text-red-500 hover:text-red-700">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- CSV Preview Section -->
+                        <div id="user-csv-preview-section" class="hidden">
+                            <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+                                <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-lg font-medium text-gray-900">CSV Preview</h3>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-sm text-gray-500" id="user-preview-row-count"></span>
+                                            <button type="button" onclick="clearUserPreview()" class="text-red-600 hover:text-red-800">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-4">
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full divide-y divide-gray-200" id="user-csv-preview-table">
+                                            <thead class="bg-gray-50">
+                                                <tr id="user-csv-preview-header"></tr>
+                                            </thead>
+                                            <tbody class="bg-white divide-y divide-gray-200" id="user-csv-preview-body"></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                                        <div class="flex">
+                                            <i class="fas fa-info-circle text-green-400 mt-0.5 mr-2"></i>
+                                            <div class="text-sm text-green-800">
+                                                <p class="font-medium">Preview shows first 5 rows only.</p>
+                                                <p>Emails will be auto-generated and default PIN 12345 will be assigned.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="flex items-center">
-                            <input id="send-emails" name="send_welcome_emails" type="checkbox" 
+                            <input id="send-emails" name="send_welcome_emails" type="checkbox"
                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                             <label for="send-emails" class="ml-2 block text-sm text-gray-900">
                                 Send welcome emails to new users
@@ -253,10 +327,9 @@
                         </div>
 
                         <div class="flex justify-end">
-                            <button type="submit" 
-                                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
-                                <i class="fas fa-upload mr-2"></i>
-                                Import Users
+                            <button type="button" id="user-csv-submit-btn" onclick="handleUserCSVSubmit()"
+                                    class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200">
+                                <i class="fas fa-upload mr-2"></i><span id="user-csv-submit-text">Import Users</span>
                             </button>
                         </div>
                     </div>
@@ -378,9 +451,602 @@ function testApiConnection() {
     alert('API connection test functionality will be implemented');
 }
 
+// Function to check user import status
+function checkUserImportStatus() {
+    const importInProgress = sessionStorage.getItem('userImportInProgress');
+    const startTime = sessionStorage.getItem('userImportStartTime');
+
+    if (importInProgress === 'true') {
+        const elapsed = Date.now() - parseInt(startTime || '0');
+        console.log('🔄 User import was in progress, elapsed time:', elapsed + 'ms');
+
+        // Clear the flags
+        sessionStorage.removeItem('userImportInProgress');
+        sessionStorage.removeItem('userImportStartTime');
+
+        console.log('✅ User import completed - page was redirected back');
+
+        // Check for Django messages
+        const messages = document.querySelectorAll('.alert, [class*="bg-green"], [class*="bg-red"]');
+        console.log('Messages found on page:', messages.length);
+        messages.forEach((msg, index) => {
+            console.log(`Message ${index + 1}:`, msg.textContent.trim());
+        });
+    } else {
+        console.log('ℹ️ No user import in progress');
+    }
+}
+
+// User CSV Import functionality
+function initializeUserCsvImport() {
+    console.log('👥 User CSV import script loading...');
+
+    // Check import status first
+    checkUserImportStatus();
+
+    const form = document.getElementById('user-csv-form');
+    const fileInput = document.getElementById('user-csv-file');
+    const progressContainer = document.getElementById('user-csv-progress-container');
+    const progressBar = document.getElementById('user-csv-progress-bar');
+    const progressText = document.getElementById('user-csv-progress-text');
+    const submitBtn = document.getElementById('user-csv-submit-btn');
+    const selectedFileInfo = document.getElementById('user-selected-file-info');
+    const selectedFileName = document.getElementById('user-selected-file-name');
+    const selectedFileSize = document.getElementById('user-selected-file-size');
+
+    // Debug: Check if elements are found
+    console.log('User form found:', !!form);
+    console.log('User file input found:', !!fileInput);
+    console.log('User submit button found:', !!submitBtn);
+    console.log('User progress container found:', !!progressContainer);
+
+    if (!form || !fileInput) {
+        console.error('User CSV form or file input not found!');
+        return;
+    }
+
+    // Add click listener to submit button for debugging
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function(e) {
+            console.log('🔥 USER SUBMIT BUTTON CLICKED!');
+            console.log('Button disabled:', submitBtn.disabled);
+            console.log('Form action:', form ? form.action : 'No form');
+            console.log('Form method:', form ? form.method : 'No form');
+            console.log('File selected:', fileInput ? !!fileInput.files[0] : 'No file input');
+            if (fileInput && fileInput.files[0]) {
+                console.log('File name:', fileInput.files[0].name);
+                console.log('File size:', fileInput.files[0].size);
+            }
+        });
+    }
+
+    // File selection handler
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                alert('Please select a CSV file.');
+                fileInput.value = '';
+                return;
+            }
+
+            selectedFileName.textContent = file.name;
+            selectedFileSize.textContent = formatFileSize(file.size);
+            selectedFileInfo.classList.remove('hidden');
+
+            // Read and preview CSV
+            readAndPreviewUserCSV(file);
+
+        } else {
+            selectedFileInfo.classList.add('hidden');
+            clearUserPreview();
+        }
+    });
+
+    // Form submission handler
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            console.log('🚀 USER FORM SUBMIT EVENT TRIGGERED!');
+            console.log('Event type:', e.type);
+            console.log('Form target:', e.target);
+            console.log('Form action URL:', form.action);
+            console.log('Form method:', form.method);
+            console.log('Form enctype:', form.enctype);
+
+            const file = fileInput.files[0];
+            console.log('File check - File exists:', !!file);
+
+            if (!file) {
+                console.log('❌ No file selected - preventing submission');
+                e.preventDefault();
+                alert('Please select a CSV file first.');
+                return false;
+            }
+
+            console.log('✅ File found:', file.name, 'Size:', file.size);
+
+            // Validate file type again
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                console.log('❌ Invalid file type - preventing submission');
+                e.preventDefault();
+                alert('Please select a valid CSV file.');
+                return false;
+            }
+
+            console.log('✅ File validation passed - proceeding with submission');
+            console.log('📊 Starting progress indicators...');
+
+            // Show progress and disable form
+            if (progressContainer) {
+                console.log('✅ Showing progress container');
+                progressContainer.style.display = 'block';
+            } else {
+                console.log('❌ Progress container not found');
+            }
+
+            if (submitBtn) {
+                console.log('✅ Disabling submit button and changing text');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+            } else {
+                console.log('❌ Submit button not found');
+            }
+
+            // Hide preview section during upload
+            const previewSection = document.getElementById('user-csv-preview-section');
+            if (previewSection) {
+                console.log('✅ Hiding preview section');
+                previewSection.style.display = 'none';
+            }
+
+            // Simulate progress for visual feedback
+            console.log('📈 Starting progress animation');
+            let progress = 0;
+            const interval = setInterval(function() {
+                if (progress < 90) {
+                    progress += Math.random() * 15;
+                    if (progress > 90) progress = 90;
+                    if (progressBar) progressBar.style.width = progress + '%';
+                    if (progressText) progressText.textContent = Math.round(progress) + '%';
+                    console.log('User Progress:', Math.round(progress) + '%');
+                }
+            }, 300);
+
+            // Complete progress after a delay
+            setTimeout(function() {
+                console.log('🏁 Completing user progress to 100%');
+                if (progressBar) progressBar.style.width = '100%';
+                if (progressText) progressText.textContent = '100%';
+                clearInterval(interval);
+            }, 1500);
+
+            // Store form submission state
+            console.log('💾 Storing user submission state in sessionStorage');
+            sessionStorage.setItem('userImportInProgress', 'true');
+            sessionStorage.setItem('userImportStartTime', Date.now().toString());
+
+            console.log('🎯 User form submission proceeding normally...');
+            // Let the form submit normally
+            return true;
+        });
+    } else {
+        console.error('❌ User CSV form not found!');
+    }
+}
+
+function readAndPreviewUserCSV(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const csv = e.target.result;
+        const lines = csv.split('\n').filter(line => line.trim() !== '');
+
+        if (lines.length < 2) {
+            alert('CSV file must contain at least a header row and one data row.');
+            clearUserFileSelection();
+            return;
+        }
+
+        // Parse CSV
+        const headers = parseUserCSVLine(lines[0]);
+        const requiredHeaders = ['first_name', 'last_name', 'student_id'];
+
+        // Validate headers
+        const missingHeaders = requiredHeaders.filter(header =>
+            !headers.some(h => h.toLowerCase().trim() === header.toLowerCase())
+        );
+
+        if (missingHeaders.length > 0) {
+            alert(`Missing required columns: ${missingHeaders.join(', ')}\nPlease download the template and use the correct format.`);
+            clearUserFileSelection();
+            return;
+        }
+
+        // Show preview with generated emails
+        displayUserCSVPreview(headers, lines.slice(1, 6)); // Show first 5 data rows
+
+        // Enable submit button after successful preview
+        const submitBtn = document.getElementById('user-csv-submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            console.log('✅ User submit button enabled after successful preview');
+        }
+    };
+
+    reader.onerror = function() {
+        alert('Error reading file. Please try again.');
+        clearUserFileSelection();
+    };
+
+    reader.readAsText(file);
+}
+
+function parseUserCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+
+    result.push(current.trim());
+    return result;
+}
+
+function displayUserCSVPreview(headers, dataRows) {
+    const previewSection = document.getElementById('user-csv-preview-section');
+    const previewHeader = document.getElementById('user-csv-preview-header');
+    const previewBody = document.getElementById('user-csv-preview-body');
+    const rowCount = document.getElementById('user-preview-row-count');
+
+    // Clear previous content
+    previewHeader.innerHTML = '';
+    previewBody.innerHTML = '';
+
+    // Add headers + generated email column
+    const displayHeaders = [...headers, 'Generated Email'];
+    displayHeaders.forEach(header => {
+        const th = document.createElement('th');
+        th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider';
+        th.textContent = header;
+        previewHeader.appendChild(th);
+    });
+
+    // Add data rows
+    dataRows.forEach((line, index) => {
+        const data = parseUserCSVLine(line);
+        const tr = document.createElement('tr');
+        tr.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+        headers.forEach((header, colIndex) => {
+            const td = document.createElement('td');
+            td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900';
+            td.textContent = data[colIndex] || '';
+            tr.appendChild(td);
+        });
+
+        // Add generated email column
+        const emailTd = document.createElement('td');
+        emailTd.className = 'px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium';
+
+        // Generate email like the system does
+        const firstName = data[headers.indexOf('first_name')] || '';
+        const lastName = data[headers.indexOf('last_name')] || '';
+        if (firstName && lastName) {
+            const firstLetter = firstName.charAt(0).toLowerCase();
+            const cleanLastName = lastName.toLowerCase().replace(/\s+/g, '');
+            emailTd.textContent = `${firstLetter}${cleanLastName}@deigratiams.edu.gh`;
+        } else {
+            emailTd.textContent = 'Invalid data';
+            emailTd.className = 'px-6 py-4 whitespace-nowrap text-sm text-red-600';
+        }
+
+        tr.appendChild(emailTd);
+        previewBody.appendChild(tr);
+    });
+
+    // Update row count
+    rowCount.textContent = `Showing ${Math.min(dataRows.length, 5)} of ${dataRows.length} rows`;
+
+    // Show preview section
+    previewSection.classList.remove('hidden');
+}
+
+function clearUserPreview() {
+    const previewSection = document.getElementById('user-csv-preview-section');
+    previewSection.classList.add('hidden');
+    clearUserFileSelection();
+}
+
+function clearUserFileSelection() {
+    const fileInput = document.getElementById('user-csv-file');
+    const selectedFileInfo = document.getElementById('user-selected-file-info');
+    const submitBtn = document.getElementById('user-csv-submit-btn');
+    const previewSection = document.getElementById('user-csv-preview-section');
+
+    if (fileInput) fileInput.value = '';
+    if (selectedFileInfo) selectedFileInfo.classList.add('hidden');
+    if (previewSection) previewSection.classList.add('hidden');
+    if (submitBtn) submitBtn.disabled = true;
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// User CSV submission handler (like Add Book button)
+function handleUserCSVSubmit() {
+    console.log('🖱️ User CSV submit button clicked!');
+
+    // Basic validation
+    const fileInput = document.getElementById('user-csv-file');
+    if (!fileInput || !fileInput.files[0]) {
+        alert('Please select a CSV file first.');
+        return false;
+    }
+
+    const file = fileInput.files[0];
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Please select a valid CSV file.');
+        return false;
+    }
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('user-csv-submit-btn');
+    const submitText = document.getElementById('user-csv-submit-text');
+    const progressContainer = document.getElementById('user-csv-progress-container');
+    const progressBar = document.getElementById('user-csv-progress-bar');
+    const progressText = document.getElementById('user-csv-progress-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        console.log('✅ Loading state applied');
+    }
+
+    // Show progress indicators
+    if (progressContainer) {
+        progressContainer.style.display = 'block';
+        console.log('✅ Progress container shown');
+    }
+
+    // Hide preview section
+    const previewSection = document.getElementById('user-csv-preview-section');
+    if (previewSection) {
+        previewSection.style.display = 'none';
+    }
+
+    // Simulate progress
+    let progress = 0;
+    const interval = setInterval(function() {
+        if (progress < 90) {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            if (progressBar) progressBar.style.width = progress + '%';
+            if (progressText) progressText.textContent = Math.round(progress) + '%';
+        }
+    }, 300);
+
+    // Complete progress
+    setTimeout(function() {
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressText) progressText.textContent = '100%';
+        clearInterval(interval);
+    }, 1500);
+
+    console.log('🚀 Submitting user CSV form...');
+
+    // Find and submit the form
+    const userCSVForm = document.getElementById('user-csv-form');
+    if (userCSVForm) {
+        console.log('✅ User CSV form found, submitting...');
+
+        // Store submission state
+        sessionStorage.setItem('userImportInProgress', 'true');
+        sessionStorage.setItem('userImportStartTime', Date.now().toString());
+
+        userCSVForm.submit();
+    } else {
+        console.log('❌ User CSV form not found');
+        alert('Error: Could not find the form to submit.');
+
+        // Restore button state
+        if (submitBtn && submitText) {
+            submitBtn.disabled = false;
+            submitText.innerHTML = '<i class="fas fa-upload mr-2"></i>Import Users';
+        }
+        if (progressContainer) {
+            progressContainer.style.display = 'none';
+        }
+    }
+
+    return false;
+}
+
+// Single User form submission handler with AJAX and error handling
+function handleSingleUserSubmit() {
+    console.log('🖱️ Single User submit button clicked!');
+
+    // Clear any previous error messages
+    clearErrorMessages();
+
+    // Basic validation
+    const form = document.getElementById('single-user-form');
+    if (!form) {
+        console.error('❌ Single user form not found!');
+        showErrorMessage('Error: Could not find the form to submit.');
+        return false;
+    }
+
+    // Check required fields
+    const requiredFields = form.querySelectorAll('[required]');
+    let hasErrors = false;
+    let errorMessages = [];
+
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('border-red-500');
+            hasErrors = true;
+            const label = form.querySelector(`label[for="${field.name}"], label`);
+            const fieldName = label ? label.textContent.replace('*', '').trim() : field.name;
+            errorMessages.push(`${fieldName} is required`);
+        } else {
+            field.classList.remove('border-red-500');
+        }
+    });
+
+    // Check password match
+    const password1 = form.querySelector('[name="password1"]');
+    const password2 = form.querySelector('[name="password2"]');
+    if (password1 && password2 && password1.value !== password2.value) {
+        password2.classList.add('border-red-500');
+        hasErrors = true;
+        errorMessages.push('Passwords do not match');
+    }
+
+    if (hasErrors) {
+        showErrorMessage('Please fix the following errors:<br>• ' + errorMessages.join('<br>• '));
+        return false;
+    }
+
+    console.log('⏳ Showing loading state...');
+
+    // Show loading state
+    const submitBtn = document.getElementById('single-user-submit-btn');
+    const submitText = document.getElementById('single-user-submit-text');
+
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
+        console.log('✅ Loading state applied');
+    }
+
+    console.log('🚀 Submitting single user form via AJAX...');
+
+    // Prepare form data
+    const formData = new FormData(form);
+
+    // Submit via AJAX to handle errors properly
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => {
+        console.log('📡 Response received:', response.status, response.statusText);
+
+        if (response.ok) {
+            return response.text().then(text => {
+                // Check if response contains success indicators
+                if (text.includes('created successfully') || text.includes('User') && text.includes('created')) {
+                    console.log('✅ User created successfully!');
+                    showSuccessMessage('User created successfully! Redirecting...');
+
+                    // Redirect after a short delay to show success message
+                    setTimeout(() => {
+                        window.location.href = '{% url "user_list" %}';
+                    }, 1500);
+                } else {
+                    // Parse HTML response for form errors
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(text, 'text/html');
+                    const errorElements = doc.querySelectorAll('.errorlist li, .alert-danger, .text-red-500');
+
+                    if (errorElements.length > 0) {
+                        const errors = Array.from(errorElements).map(el => el.textContent.trim());
+                        console.log('❌ Form errors found:', errors);
+                        showErrorMessage('Please fix the following errors:<br>• ' + errors.join('<br>• '));
+                    } else {
+                        console.log('❓ Unexpected response format');
+                        showErrorMessage('Unexpected response from server. Please try again.');
+                    }
+
+                    // Restore button state
+                    if (submitBtn && submitText) {
+                        submitBtn.disabled = false;
+                        submitText.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Create User';
+                    }
+                }
+            });
+        } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error submitting form:', error);
+        showErrorMessage(`Error submitting form: ${error.message}`);
+
+        // Restore button state
+        if (submitBtn && submitText) {
+            submitBtn.disabled = false;
+            submitText.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Create User';
+        }
+    });
+
+    return false;
+}
+
+// Helper functions for error/success messages
+function showErrorMessage(message) {
+    clearErrorMessages();
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'form-error-message';
+    errorDiv.className = 'mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md';
+    errorDiv.innerHTML = `<div class="flex"><div class="flex-shrink-0"><i class="fas fa-exclamation-circle"></i></div><div class="ml-3">${message}</div></div>`;
+
+    const form = document.getElementById('single-user-form');
+    if (form) {
+        form.insertBefore(errorDiv, form.firstChild);
+        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function showSuccessMessage(message) {
+    clearErrorMessages();
+    const successDiv = document.createElement('div');
+    successDiv.id = 'form-success-message';
+    successDiv.className = 'mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md';
+    successDiv.innerHTML = `<div class="flex"><div class="flex-shrink-0"><i class="fas fa-check-circle"></i></div><div class="ml-3">${message}</div></div>`;
+
+    const form = document.getElementById('single-user-form');
+    if (form) {
+        form.insertBefore(successDiv, form.firstChild);
+        successDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function clearErrorMessages() {
+    const existingError = document.getElementById('form-error-message');
+    const existingSuccess = document.getElementById('form-success-message');
+    if (existingError) existingError.remove();
+    if (existingSuccess) existingSuccess.remove();
+
+    // Clear field error styling
+    const errorFields = document.querySelectorAll('.border-red-500');
+    errorFields.forEach(field => field.classList.remove('border-red-500'));
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     toggleAcademicFields();
+    initializeUserCsvImport();
 });
 </script>
 {% endblock %}

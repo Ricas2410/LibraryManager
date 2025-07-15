@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load library_extras %}
 
 {% block title %}Advanced Search - LibraryPro{% endblock %}
 
@@ -33,16 +34,24 @@
                 {% endif %}
             </div>
 
-            <!-- Search Input -->
+            <!-- Search Input with Live Search -->
             <div class="relative max-w-2xl mx-auto">
-                <input type="text" name="q" value="{{ query }}" 
+                <input type="text" name="q" value="{{ query }}"
                        placeholder="{% if search_type == 'books' %}Search by title, author, ISBN, publisher...{% elif search_type == 'users' %}Search by name, username, email...{% else %}Search by book title, borrower name...{% endif %}"
-                       class="w-full pl-12 pr-20 py-4 text-lg border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-lg">
+                       class="w-full pl-12 pr-20 py-4 text-lg border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-lg"
+                       id="advanced-search-input"
+                       autocomplete="off">
                 <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
-                <button type="submit" 
-                        class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-medium transition-all duration-300">
+                <button type="submit"
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-medium transition-all duration-300"
+                        onclick="performSearch(event)">
                     Search
                 </button>
+
+                <!-- Live Search Results -->
+                <div id="advanced-search-results" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 hidden max-h-96 overflow-y-auto">
+                    <!-- Results will be populated here -->
+                </div>
             </div>
 
             <input type="hidden" name="type" value="{{ search_type }}" id="searchTypeInput">
@@ -74,7 +83,7 @@
                         <div class="flex items-start space-x-4">
                             <div class="w-16 h-20 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
                                 {% if book.cover_image %}
-                                <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="w-16 h-20 object-cover rounded-lg">
+                                <img src="{{ book.cover_image|cloudinary_url }}" alt="{{ book.title }}" class="w-16 h-20 object-cover rounded-lg">
                                 {% else %}
                                 <i class="fas fa-book text-gray-400 text-xl"></i>
                                 {% endif %}
@@ -237,16 +246,16 @@
 <script>
 function setSearchType(type) {
     document.getElementById('searchTypeInput').value = type;
-    
+
     // Update tab appearance
     document.querySelectorAll('.search-tab').forEach(tab => {
         tab.classList.remove('bg-white', 'text-blue-600', 'shadow-md');
         tab.classList.add('text-gray-600');
     });
-    
+
     event.target.classList.add('bg-white', 'text-blue-600', 'shadow-md');
     event.target.classList.remove('text-gray-600');
-    
+
     // Update placeholder
     const input = document.querySelector('input[name="q"]');
     if (type === 'books') {
@@ -258,9 +267,123 @@ function setSearchType(type) {
     }
 }
 
-// Auto-focus search input
+function performSearch(event) {
+    event.preventDefault();
+    const form = event.target.closest('form');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+
+    // Submit the form normally
+    form.submit();
+}
+
+// Live Search for Advanced Search
+let advancedSearchTimeout;
+function setupAdvancedLiveSearch() {
+    const searchInput = document.getElementById('advanced-search-input');
+    const searchResults = document.getElementById('advanced-search-results');
+
+    if (searchInput && searchResults) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(advancedSearchTimeout);
+            const query = this.value.trim();
+            const searchType = document.getElementById('searchTypeInput').value;
+
+            if (query.length >= 2) {
+                advancedSearchTimeout = setTimeout(() => {
+                    performAdvancedLiveSearch(query, searchType);
+                }, 300);
+            } else {
+                searchResults.classList.add('hidden');
+            }
+        });
+
+        // Hide results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.classList.add('hidden');
+            }
+        });
+    }
+}
+
+function performAdvancedLiveSearch(query, type) {
+    const searchResults = document.getElementById('advanced-search-results');
+
+    fetch(`/api/live-search/?q=${encodeURIComponent(query)}&type=${type}`)
+        .then(response => response.json())
+        .then(data => {
+            displayAdvancedSearchResults(data, type);
+            searchResults.classList.remove('hidden');
+        })
+        .catch(error => {
+            console.error('Advanced search error:', error);
+        });
+}
+
+function displayAdvancedSearchResults(data, type) {
+    const searchResults = document.getElementById('advanced-search-results');
+
+    if ((type === 'books' && data.books.length === 0) ||
+        (type === 'users' && data.users.length === 0) ||
+        (type === 'loans' && data.loans && data.loans.length === 0)) {
+        searchResults.innerHTML = '<div class="p-6 text-center text-gray-500">No results found</div>';
+        return;
+    }
+
+    let html = '';
+
+    if (type === 'books' && data.books.length > 0) {
+        html += '<div class="p-4 border-b border-gray-200"><h4 class="font-semibold text-gray-900">Books</h4></div>';
+        data.books.forEach(book => {
+            html += `
+                <a href="/books/${book.id}/" class="block p-4 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-100">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-book text-blue-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h5 class="font-medium text-gray-900">${book.title}</h5>
+                            <p class="text-sm text-gray-600">by ${book.authors}</p>
+                            <div class="flex items-center mt-1">
+                                <span class="text-xs px-2 py-1 rounded-full ${book.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${book.available ? 'Available' : 'Borrowed'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            `;
+        });
+    }
+
+    if (type === 'users' && data.users.length > 0) {
+        html += '<div class="p-4 border-b border-gray-200"><h4 class="font-semibold text-gray-900">Users</h4></div>';
+        data.users.forEach(user => {
+            html += `
+                <a href="/users/${user.id}/" class="block p-4 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-100">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-user text-green-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h5 class="font-medium text-gray-900">${user.name}</h5>
+                            <p class="text-sm text-gray-600">${user.role}</p>
+                            <p class="text-xs text-gray-500">${user.email}</p>
+                        </div>
+                    </div>
+                </a>
+            `;
+        });
+    }
+
+    searchResults.innerHTML = html;
+}
+
+// Auto-focus search input and setup live search
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('input[name="q"]').focus();
+    setupAdvancedLiveSearch();
 });
 </script>
 {% endblock %}

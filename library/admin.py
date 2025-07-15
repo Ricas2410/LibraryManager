@@ -1,7 +1,23 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import (User, Book, Author, Category, Publisher, Loan, Reservation,
-                     LibrarySettings, AuditLog, Section, ShelfLocation, Floor)
+                     LibrarySettings, AuditLog, Section, ShelfLocation, Floor, ReadingHistory)
+
+# Customize admin site headers and titles
+def get_library_name():
+    """Get library name from settings or use default"""
+    try:
+        from .models import LibrarySettings
+        settings = LibrarySettings.get_settings()
+        return settings.library_name or "Library Management System"
+    except:
+        return "Library Management System"
+
+# Set dynamic admin site headers
+library_name = get_library_name()
+admin.site.site_header = f"{library_name} Administration"
+admin.site.site_title = "Library Admin"
+admin.site.index_title = f"Welcome to {library_name}"
 
 
 @admin.register(User)
@@ -167,7 +183,8 @@ class LibrarySettingsAdmin(admin.ModelAdmin):
     list_display = ('library_name', 'default_loan_period', 'daily_fine_rate', 'is_active')
 
     fieldsets = (
-        (None, {'fields': ('library_name', 'library_address', 'library_phone', 'library_email', 'library_logo')}),
+        ('Library Information', {'fields': ('library_name', 'library_address', 'library_phone', 'library_email')}),
+        ('Branding & Images', {'fields': ('library_logo', 'login_banner')}),
         ('Loan Policies', {'fields': ('default_loan_period', 'max_renewals', 'max_books_per_user')}),
         ('Fine Policies', {'fields': ('daily_fine_rate', 'max_fine_amount')}),
         ('Reservation Policies', {'fields': ('reservation_expiry_days', 'max_reservations_per_user')}),
@@ -198,6 +215,43 @@ class AuditLogAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         # Audit logs should not be editable
         return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Allow deletion for cleanup purposes
+        return request.user.is_superuser
+
+
+@admin.register(ReadingHistory)
+class ReadingHistoryAdmin(admin.ModelAdmin):
+    list_display = ('user', 'book', 'date_returned', 'pages_read', 'reading_duration_days', 'term_period')
+    list_filter = ('term_period', 'date_returned', 'academic_year')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'book__title')
+    readonly_fields = ('user', 'book', 'loan', 'date_borrowed', 'date_returned', 'pages_read', 'reading_duration_days', 'created_at')
+    ordering = ('-date_returned',)
+
+    fieldsets = (
+        ('Reading Information', {
+            'fields': ('user', 'book', 'loan')
+        }),
+        ('Reading Details', {
+            'fields': ('date_borrowed', 'date_returned', 'pages_read', 'reading_duration_days')
+        }),
+        ('Achievement Tracking', {
+            'fields': ('term_period', 'academic_year')
+        }),
+        ('Metadata', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def has_add_permission(self, request):
+        # Reading history should only be created automatically
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Only allow changing term_period and academic_year
+        return request.user.is_superuser
 
     def has_delete_permission(self, request, obj=None):
         # Allow deletion for cleanup purposes

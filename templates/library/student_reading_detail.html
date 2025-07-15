@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ student.get_full_name }} - Reading History - LibraryPro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center space-x-4 mb-2">
+                    <a href="{% url 'admin_reading_history' %}" class="text-blue-600 hover:text-blue-800 transition-colors duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Leaderboard
+                    </a>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                        <span class="text-blue-600 font-medium text-lg">
+                            {{ student.first_name|first }}{{ student.last_name|first }}
+                        </span>
+                    </div>
+                    {{ student.get_full_name }}'s Reading History
+                </h1>
+                <div class="flex items-center space-x-4 mt-2">
+                    <span class="text-gray-600">{{ student.enrollment_number }}</span>
+                    {% if student.class_grade %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {{ student.class_grade }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium">Books Read</p>
+                    <p class="text-3xl font-bold">{{ stats.total_books }}</p>
+                </div>
+                <div class="bg-white/20 rounded-lg p-3">
+                    <i class="fas fa-books text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm font-medium">Pages Read</p>
+                    <p class="text-3xl font-bold">{{ stats.total_pages|floatformat:0 }}</p>
+                </div>
+                <div class="bg-white/20 rounded-lg p-3">
+                    <i class="fas fa-file-alt text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-purple-100 text-sm font-medium">Avg. Reading Time</p>
+                    <p class="text-3xl font-bold">{{ stats.avg_reading_time|floatformat:0 }}</p>
+                    <p class="text-purple-100 text-xs">days per book</p>
+                </div>
+                <div class="bg-white/20 rounded-lg p-3">
+                    <i class="fas fa-clock text-2xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sort Options -->
+    <div class="mb-6">
+        <div class="flex items-center space-x-4">
+            <span class="text-sm font-medium text-gray-700">Sort by:</span>
+            <div class="flex space-x-2">
+                <a href="?sort=date" class="px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200 {% if sort_by == 'date' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    Date
+                </a>
+                <a href="?sort=title" class="px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200 {% if sort_by == 'title' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    Title
+                </a>
+                <a href="?sort=pages" class="px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200 {% if sort_by == 'pages' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    Pages
+                </a>
+                <a href="?sort=duration" class="px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200 {% if sort_by == 'duration' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    Reading Time
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reading History Table -->
+    {% if history %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Detailed Reading History</h2>
+            <p class="text-sm text-gray-600">All books read by {{ student.get_full_name }} this term</p>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pages</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Borrowed</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Returned</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reading Time</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for record in history %}
+                    <tr class="hover:bg-gray-50 transition-colors duration-200">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="w-12 h-16 bg-gray-200 rounded-lg flex items-center justify-center mr-4">
+                                    {% if record.book.cover_image %}
+                                    <img src="{{ record.book.cover_image.url }}" alt="{{ record.book.title }}" class="w-12 h-16 object-cover rounded-lg">
+                                    {% else %}
+                                    <i class="fas fa-book text-gray-400 text-xl"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">{{ record.book.title }}</div>
+                                    <div class="text-sm text-gray-500">
+                                        {% for author in record.book.authors.all %}
+                                            {{ author.get_full_name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            {% for category in record.book.categories.all %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 mr-1">
+                                    {{ category.name }}
+                                </span>
+                            {% endfor %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ record.pages_read }} pages
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            {{ record.date_borrowed|date:"M d, Y" }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            {{ record.date_returned|date:"M d, Y" }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                {% if record.reading_duration_days <= 7 %}bg-green-100 text-green-800
+                                {% elif record.reading_duration_days <= 14 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ record.reading_duration_days }} day{{ record.reading_duration_days|pluralize }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if history.has_other_pages %}
+        <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+            <div class="flex items-center justify-between">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    {% if history.has_previous %}
+                    <a href="?page={{ history.previous_page_number }}&sort={{ sort_by }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Previous</a>
+                    {% endif %}
+                    {% if history.has_next %}
+                    <a href="?page={{ history.next_page_number }}&sort={{ sort_by }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Next</a>
+                    {% endif %}
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing <span class="font-medium">{{ history.start_index }}</span> to <span class="font-medium">{{ history.end_index }}</span> of <span class="font-medium">{{ history.paginator.count }}</span> books
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            {% if history.has_previous %}
+                            <a href="?page={{ history.previous_page_number }}&sort={{ sort_by }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                            {% endif %}
+                            
+                            {% for num in history.paginator.page_range %}
+                                {% if history.number == num %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600">{{ num }}</span>
+                                {% else %}
+                                <a href="?page={{ num }}&sort={{ sort_by }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">{{ num }}</a>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if history.has_next %}
+                            <a href="?page={{ history.next_page_number }}&sort={{ sort_by }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <!-- No Reading History -->
+    <div class="text-center py-16">
+        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-book-reader text-4xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-medium text-gray-500 mb-2">No Reading History</h3>
+        <p class="text-gray-400 mb-6">{{ student.get_full_name }} hasn't read any books this term yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

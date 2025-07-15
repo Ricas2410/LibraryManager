@@ -1,13 +1,23 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load library_extras %}
 
 {% block title %}Request Book - {{ book.title }}{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
     <!-- Header -->
-    <div class="mb-8">
-        <nav class="flex" aria-label="Breadcrumb">
+    <div class="mb-6 sm:mb-8">
+        <!-- Mobile Back Button -->
+        <div class="block sm:hidden mb-4">
+            <a href="{% url 'book_detail' book.id %}" class="inline-flex items-center text-blue-600 hover:text-blue-800">
+                <i class="fas fa-arrow-left mr-2"></i>
+                <span class="text-sm">Back to Book</span>
+            </a>
+        </div>
+
+        <!-- Desktop Breadcrumb -->
+        <nav class="hidden sm:flex" aria-label="Breadcrumb">
             <ol class="flex items-center space-x-4">
                 <li>
                     <a href="{% url 'home' %}" class="text-gray-500 hover:text-gray-700">
@@ -38,60 +48,60 @@
 
     <!-- Main Content -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 bg-blue-50">
-            <h1 class="text-2xl font-bold text-gray-900 flex items-center">
-                <i class="fas fa-hand-holding mr-3 text-blue-600"></i>
+        <div class="px-4 py-4 sm:px-6 sm:py-4 border-b border-gray-200 bg-blue-50">
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-hand-holding mr-2 sm:mr-3 text-blue-600"></i>
                 Request to Borrow Book
             </h1>
-            <p class="text-gray-600 mt-2">Confirm your request to borrow this book</p>
+            <p class="text-gray-600 mt-2 text-sm sm:text-base">Confirm your request to borrow this book</p>
         </div>
 
-        <div class="p-6">
+        <div class="p-4 sm:p-6">
             <!-- Book Information -->
-            <div class="bg-gray-50 rounded-lg p-6 mb-6">
-                <div class="flex items-start space-x-6">
-                    <div class="flex-shrink-0">
+            <div class="bg-gray-50 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+                <div class="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-6">
+                    <div class="flex-shrink-0 mx-auto sm:mx-0">
                         {% if book.cover_image %}
-                            <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="w-32 h-40 object-cover rounded-lg shadow-md">
+                            <img src="{{ book.cover_image|cloudinary_url }}" alt="{{ book.title }}" class="w-24 h-32 sm:w-32 sm:h-40 object-cover rounded-lg shadow-md">
                         {% else %}
-                            <div class="w-32 h-40 bg-gray-200 rounded-lg flex items-center justify-center shadow-md">
-                                <i class="fas fa-book text-gray-400 text-3xl"></i>
+                            <div class="w-24 h-32 sm:w-32 sm:h-40 bg-gray-200 rounded-lg flex items-center justify-center shadow-md">
+                                <i class="fas fa-book text-gray-400 text-2xl sm:text-3xl"></i>
                             </div>
                         {% endif %}
                     </div>
-                    <div class="flex-1">
-                        <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ book.title }}</h2>
+                    <div class="flex-1 text-center sm:text-left">
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{{ book.title }}</h2>
                         {% if book.subtitle %}
-                            <p class="text-lg text-gray-600 mb-3">{{ book.subtitle }}</p>
+                            <p class="text-base sm:text-lg text-gray-600 mb-3">{{ book.subtitle }}</p>
                         {% endif %}
-                        
-                        <div class="space-y-2">
+
+                        <div class="space-y-2 text-sm sm:text-base">
                             <p class="text-gray-700">
                                 <span class="font-medium">Author(s):</span>
                                 {% for author in book.authors.all %}
                                     {{ author.first_name }} {{ author.last_name }}{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             </p>
-                            
+
                             {% if book.publisher %}
                             <p class="text-gray-700">
                                 <span class="font-medium">Publisher:</span> {{ book.publisher.name }}
                             </p>
                             {% endif %}
-                            
+
                             <p class="text-gray-700">
                                 <span class="font-medium">ISBN:</span> {{ book.isbn }}
                             </p>
-                            
+
                             <p class="text-gray-700">
                                 <span class="font-medium">Publication Date:</span> {{ book.publication_date|date:"Y" }}
                             </p>
-                            
+
                             <p class="text-gray-700">
-                                <span class="font-medium">Available Copies:</span> 
+                                <span class="font-medium">Available Copies:</span>
                                 <span class="text-green-600 font-semibold">{{ book.available_copies }} of {{ book.total_copies }}</span>
                             </p>
-                            
+
                             {% if book.section %}
                             <p class="text-gray-700">
                                 <span class="font-medium">Location:</span> {{ book.section }}
@@ -139,13 +149,13 @@
             </div>
 
             <!-- Action Buttons -->
-            <form method="post" id="request-form" class="flex items-center justify-between" data-enhanced="true" data-feedback-added="true">
+            <form method="post" id="request-form" class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between space-y-3 sm:space-y-0" data-enhanced="true" data-feedback-added="true">
                 {% csrf_token %}
-                <a href="{% url 'book_detail' book.id %}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                <a href="{% url 'book_detail' book.id %}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 sm:px-6 sm:py-3 rounded-lg font-medium transition-all duration-200 shadow-sm text-center text-sm sm:text-base order-2 sm:order-1">
                     <i class="fas fa-arrow-left mr-2"></i>Cancel
                 </a>
 
-                <button type="button" id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm" data-feedback-added="true" onclick="handleSubmit()">
+                <button type="button" id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 sm:px-8 sm:py-3 rounded-lg font-medium transition-all duration-200 shadow-sm text-sm sm:text-base order-1 sm:order-2" data-feedback-added="true" onclick="handleSubmit()">
                     <i class="fas fa-check mr-2"></i><span id="submit-text">Confirm Borrow Request</span>
                 </button>
             </form>

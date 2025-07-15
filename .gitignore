@@ -1,19 +1,43 @@
 # Python
 __pycache__/
 *.py[cod]
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Django
 *.sqlite3
 *.db
 *.log
 *.pot
-*.pyc
-*.pyo
-*.pyd
-*.env
-.env
-venv/
-ENV/
-.env.*
-.DS_Store
-*.so
 staticfiles/
 media/
+
+# Environment variables
+*.env
+.env
+.env.*
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# Development files
+test_*.py
+debug_*.py
+test_*.csv
+test_*.html
+
+# IDE and OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Backups
+backups/
+*.bak

@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/custom_admin.css' %}">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Favicon -->
+    {% if library_settings.library_logo %}
+        {% load library_settings_tags %}
+        <link rel="icon" type="image/x-icon" href="{% safe_cloudinary_url library_settings.library_logo width=32 height=32 crop='fill' format='ico' %}">
+        <link rel="shortcut icon" type="image/x-icon" href="{% safe_cloudinary_url library_settings.library_logo width=32 height=32 crop='fill' format='ico' %}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{% safe_cloudinary_url library_settings.library_logo width=180 height=180 crop='fill' %}">
+    {% else %}
+        <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    {% endif %}
+{% endblock %}
+
+{% block branding %}
+<div style="display: flex; align-items: center; padding: 10px 20px;">
+    {% if library_settings.library_logo %}
+        {% load library_settings_tags %}
+        <img src="{% safe_cloudinary_url library_settings.library_logo width=40 height=40 crop='fill' %}" 
+             alt="{{ library_settings.library_name }} Logo" 
+             style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover; margin-right: 15px;">
+    {% else %}
+        <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+            <i class="fas fa-book-open" style="color: white; font-size: 20px;"></i>
+        </div>
+    {% endif %}
+    <div>
+        <h1 id="site-name" style="margin: 0; font-size: 24px; font-weight: bold; color: white;">
+            <a href="{% url 'admin:index' %}" style="color: white; text-decoration: none;">
+                {{ library_settings.library_name|default:"Library Administration" }}
+            </a>
+        </h1>
+        <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.8);">
+            Management System
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

@@ -1,0 +1,25 @@
+{% if has_contact_info %}
+    {% if settings.library_email %}
+    <li class="flex items-center">
+        <i class="fas fa-envelope mr-2 text-blue-400"></i>
+        {{ settings.library_email }}
+    </li>
+    {% endif %}
+    {% if settings.library_phone %}
+    <li class="flex items-center">
+        <i class="fas fa-phone mr-2 text-blue-400"></i>
+        {{ settings.library_phone }}
+    </li>
+    {% endif %}
+    {% if settings.library_address %}
+    <li class="flex items-center">
+        <i class="fas fa-map-marker-alt mr-2 text-blue-400"></i>
+        {{ settings.library_address|truncatewords:10 }}
+    </li>
+    {% endif %}
+{% else %}
+    <li class="flex items-center">
+        <i class="fas fa-info-circle mr-2 text-blue-400"></i>
+        Contact information not configured
+    </li>
+{% endif %}

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load library_extras %}
 
 {% block title %}My Reservations - Library Management System{% endblock %}
 
@@ -79,7 +80,7 @@
                     <div class="flex items-start justify-between">
                         <div class="flex items-start space-x-4">
                             {% if reservation.book.cover_image %}
-                            <img src="{{ reservation.book.cover_image.url }}" alt="{{ reservation.book.title }}" class="w-16 h-20 object-cover rounded-lg">
+                            <img src="{{ reservation.book.cover_image|cloudinary_url }}" alt="{{ reservation.book.title }}" class="w-16 h-20 object-cover rounded-lg">
                             {% else %}
                             <div class="w-16 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
                                 <i class="fas fa-book text-gray-400"></i>

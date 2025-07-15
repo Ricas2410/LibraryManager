@@ -42,14 +42,9 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             Title <span class="text-red-500">*</span>
                         </label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
-                                <i class="fas fa-book text-gray-400 text-sm"></i>
-                            </div>
-                            <input type="text" name="title" value="{{ form.title.value|default:'' }}"
-                                   class="pr-4 py-3 block w-full border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                   placeholder="Enter book title" required style="padding-left: 3rem;">
-                        </div>
+                        <input type="text" name="title" value="{{ form.title.value|default:'' }}"
+                               class="px-4 py-3 block w-full border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                               placeholder="Enter book title" required>
                         {% if form.title.errors %}
                         <p class="mt-2 text-sm text-red-600 flex items-center">
                             <i class="fas fa-exclamation-circle mr-1"></i>{{ form.title.errors.0 }}
@@ -59,14 +54,9 @@
                     
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Subtitle</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
-                                <i class="fas fa-heading text-gray-400 text-sm"></i>
-                            </div>
-                            <input type="text" name="subtitle" value="{{ form.subtitle.value|default:'' }}"
-                                   class="pr-4 py-3 block w-full border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                   placeholder="Enter book subtitle (optional)" style="padding-left: 3rem;">
-                        </div>
+                        <input type="text" name="subtitle" value="{{ form.subtitle.value|default:'' }}"
+                               class="px-4 py-3 block w-full border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                               placeholder="Enter book subtitle (optional)">
                         {% if form.subtitle.errors %}
                         <p class="mt-2 text-sm text-red-600 flex items-center">
                             <i class="fas fa-exclamation-circle mr-1"></i>{{ form.subtitle.errors.0 }}
@@ -78,14 +68,9 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             ISBN <span class="text-red-500">*</span>
                         </label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="padding-left: 1rem;">
-                                <i class="fas fa-barcode text-gray-400 text-sm"></i>
-                            </div>
-                            <input type="text" name="isbn" value="{{ form.isbn.value|default:'' }}"
-                                   class="pr-4 py-3 block w-full border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                   placeholder="978-0-123456-78-9" required style="padding-left: 3rem;">
-                        </div>
+                        <input type="text" name="isbn" value="{{ form.isbn.value|default:'' }}"
+                               class="px-4 py-3 block w-full border-2 border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                               placeholder="978-0-123456-78-9" required>
                         {% if form.isbn.errors %}
                         <p class="mt-2 text-sm text-red-600 flex items-center">
                             <i class="fas fa-exclamation-circle mr-1"></i>{{ form.isbn.errors.0 }}
@@ -136,7 +121,7 @@
                                 {% for author in form.authors.field.queryset %}
                                 <label class="flex items-center space-x-3 py-2 hover:bg-gray-50 rounded-md px-2 cursor-pointer transition-colors duration-200">
                                     <input type="checkbox" name="authors" value="{{ author.id }}"
-                                           {% if form.authors.value and author.id|stringformat:"s" in form.authors.value %}checked{% endif %}
+                                           {% if form.instance.pk and author in form.instance.authors.all %}checked{% elif form.authors.value and author.id in form.authors.value %}checked{% endif %}
                                            class="h-4 w-4 rounded border-2 border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500">
                                     <span class="text-sm text-gray-700 font-medium">{{ author.get_full_name }}</span>
                                 </label>
@@ -171,7 +156,7 @@
                                 {% for category in form.categories.field.queryset %}
                                 <label class="flex items-center space-x-3 py-2 hover:bg-gray-50 rounded-md px-2 cursor-pointer transition-colors duration-200">
                                     <input type="checkbox" name="categories" value="{{ category.id }}"
-                                           {% if form.categories.value and category.id|stringformat:"s" in form.categories.value %}checked{% endif %}
+                                           {% if form.instance.pk and category in form.instance.categories.all %}checked{% elif form.categories.value and category.id in form.categories.value %}checked{% endif %}
                                            class="h-4 w-4 rounded border-2 border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500">
                                     <span class="text-sm text-gray-700 font-medium">{{ category.name }}</span>
                                 </label>

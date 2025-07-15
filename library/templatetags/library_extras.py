@@ -1,6 +1,8 @@
 from django import template
 from django.utils.safestring import mark_safe
+from django.conf import settings
 import json
+import os
 
 register = template.Library()
 
@@ -141,3 +143,39 @@ def status_badge(status, item_type='loan'):
         'css_class': config['class'],
         'icon': config['icon']
     }
+
+
+@register.filter
+def cloudinary_url(image_field):
+    """Convert image field to proper Cloudinary URL"""
+    if not image_field:
+        return ''
+
+    # Get the image path
+    image_path = str(image_field)
+
+    # If it's already a full URL, return as is
+    if image_path.startswith('http'):
+        return image_path
+
+    # If it's a local path, convert to Cloudinary URL
+    if image_path.startswith('book_covers/') or image_path.startswith('library_logos/'):
+        # Extract filename without extension
+        filename = os.path.basename(image_path)
+        name_without_ext = os.path.splitext(filename)[0]
+
+        # Determine folder
+        if image_path.startswith('book_covers/'):
+            folder = 'book_covers'
+        else:
+            folder = 'library_logos'
+
+        # Return Cloudinary URL
+        cloud_name = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', 'ds5udo8jc')
+        return f"https://res.cloudinary.com/{cloud_name}/image/upload/{folder}/{name_without_ext}.jpg"
+
+    # Fallback to original URL
+    try:
+        return image_field.url
+    except:
+        return ''

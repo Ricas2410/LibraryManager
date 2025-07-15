@@ -1,25 +1,26 @@
 {% extends 'base.html' %}
+{% load library_extras %}
 
 {% block title %}{{ book.title }} - Library Management System{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-start">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-4 sm:space-y-0">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">{{ book.title }}</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">{{ book.title }}</h1>
             {% if book.subtitle %}
-            <h2 class="text-xl text-gray-600 mt-1">{{ book.subtitle }}</h2>
+            <h2 class="text-lg sm:text-xl text-gray-600 mt-1">{{ book.subtitle }}</h2>
             {% endif %}
         </div>
-        
+
         {% if user.can_manage_books %}
         <div class="flex space-x-2">
-            <a href="{% url 'book_edit' book.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                <i class="fas fa-edit mr-2"></i>Edit
+            <a href="{% url 'book_edit' book.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base">
+                <i class="fas fa-edit mr-1 sm:mr-2"></i>Edit
             </a>
-            <a href="{% url 'book_delete' book.id %}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
-                <i class="fas fa-trash mr-2"></i>Delete
+            <a href="{% url 'book_delete' book.id %}" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base">
+                <i class="fas fa-trash mr-1 sm:mr-2"></i>Delete
             </a>
         </div>
         {% endif %}
@@ -28,14 +29,14 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Book Cover and Basic Info -->
         <div class="lg:col-span-1">
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-white rounded-lg shadow p-4 sm:p-6">
                 <!-- Cover Image -->
-                <div class="mb-6">
+                <div class="mb-4 sm:mb-6">
                     {% if book.cover_image %}
-                    <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="w-full h-80 object-cover rounded">
+                    <img src="{{ book.cover_image|cloudinary_url }}" alt="{{ book.title }}" class="w-full h-64 sm:h-80 object-cover rounded">
                     {% else %}
-                    <div class="w-full h-80 bg-gray-200 rounded flex items-center justify-center">
-                        <i class="fas fa-book text-6xl text-gray-400"></i>
+                    <div class="w-full h-64 sm:h-80 bg-gray-200 rounded flex items-center justify-center">
+                        <i class="fas fa-book text-4xl sm:text-6xl text-gray-400"></i>
                     </div>
                     {% endif %}
                 </div>
@@ -43,8 +44,8 @@
                 <!-- Status and Availability -->
                 <div class="space-y-3">
                     <div class="flex justify-between items-center">
-                        <span class="font-medium text-gray-700">Status:</span>
-                        <span class="inline-block px-3 py-1 text-sm font-semibold rounded
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">Status:</span>
+                        <span class="inline-block px-2 py-1 sm:px-3 sm:py-1 text-xs sm:text-sm font-semibold rounded
                             {% if book.status == 'available' %}bg-green-100 text-green-800
                             {% elif book.status == 'borrowed' %}bg-yellow-100 text-yellow-800
                             {% elif book.status == 'reserved' %}bg-blue-100 text-blue-800
@@ -52,42 +53,42 @@
                             {{ book.get_status_display }}
                         </span>
                     </div>
-                    
+
                     <div class="flex justify-between items-center">
-                        <span class="font-medium text-gray-700">Availability:</span>
-                        <span class="text-gray-600">{{ book.available_copies }}/{{ book.total_copies }} available</span>
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">Availability:</span>
+                        <span class="text-gray-600 text-sm sm:text-base">{{ book.available_copies }}/{{ book.total_copies }} available</span>
                     </div>
-                    
+
                     <div class="flex justify-between items-center">
-                        <span class="font-medium text-gray-700">Location:</span>
-                        <span class="text-gray-600">{{ book.section }} - {{ book.shelf_location }}</span>
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">Location:</span>
+                        <span class="text-gray-600 text-sm sm:text-base">{{ book.section }} - {{ book.shelf_location }}</span>
                     </div>
                 </div>
 
                 <!-- Actions -->
-                <div class="mt-6 space-y-2">
+                <div class="mt-4 sm:mt-6 space-y-2">
                     {% if user.can_borrow_books %}
                         {% if book.is_available %}
                         <div class="text-center space-y-3">
-                            <p class="text-green-600 font-medium mb-2">
+                            <p class="text-green-600 font-medium mb-2 text-sm sm:text-base">
                                 <i class="fas fa-check-circle mr-1"></i>Available for borrowing
                             </p>
-                            <a href="{% url 'request_book' book.id %}" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-lg block font-medium transition-all duration-200">
+                            <a href="{% url 'request_book' book.id %}" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-3 sm:py-3 rounded-lg block font-medium transition-all duration-200 text-sm sm:text-base">
                                 <i class="fas fa-hand-holding mr-2"></i>Borrow This Book
                             </a>
-                            <p class="text-sm text-gray-500">Self-service borrowing available</p>
+                            <p class="text-xs sm:text-sm text-gray-500">Self-service borrowing available</p>
                         </div>
                         {% elif can_reserve %}
-                        <a href="{% url 'reservation_create' book.id %}" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white text-center py-2 rounded-lg block">
+                        <a href="{% url 'reservation_create' book.id %}" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white text-center py-2 sm:py-2 rounded-lg block text-sm sm:text-base">
                             <i class="fas fa-bookmark mr-2"></i>Reserve Book
                         </a>
                         {% else %}
                         <div class="text-center">
-                            <p class="text-red-600 font-medium mb-2">
+                            <p class="text-red-600 font-medium mb-2 text-sm sm:text-base">
                                 <i class="fas fa-times-circle mr-1"></i>Not available
                             </p>
                             {% if reservations %}
-                            <p class="text-sm text-gray-500">{{ reservations.count }} people in queue</p>
+                            <p class="text-xs sm:text-sm text-gray-500">{{ reservations.count }} people in queue</p>
                             {% endif %}
                         </div>
                         {% endif %}
@@ -98,52 +99,52 @@
 
         <!-- Detailed Information -->
         <div class="lg:col-span-2 space-y-6">
-            <!-- Book Details -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">Book Details</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Summary (Mobile First - shows first on mobile) -->
+            {% if book.summary %}
+            <div class="bg-white rounded-lg shadow p-4 sm:p-6 order-1 lg:order-2">
+                <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Summary</h3>
+                <p class="text-gray-600 leading-relaxed text-sm sm:text-base">{{ book.summary }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Book Details (Shows after summary on mobile) -->
+            <div class="bg-white rounded-lg shadow p-4 sm:p-6 order-2 lg:order-1">
+                <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Book Details</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                        <span class="font-medium text-gray-700">Author(s):</span>
-                        <p class="text-gray-600">{{ book.get_authors_display }}</p>
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">Author(s):</span>
+                        <p class="text-gray-600 text-sm sm:text-base">{{ book.get_authors_display }}</p>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">ISBN:</span>
-                        <p class="text-gray-600">{{ book.isbn }}</p>
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">ISBN:</span>
+                        <p class="text-gray-600 text-sm sm:text-base">{{ book.isbn }}</p>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">Publisher:</span>
-                        <p class="text-gray-600">{{ book.publisher|default:"N/A" }}</p>
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">Publisher:</span>
+                        <p class="text-gray-600 text-sm sm:text-base">{{ book.publisher|default:"N/A" }}</p>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">Publication Date:</span>
-                        <p class="text-gray-600">{{ book.publication_date|date:"M d, Y" }}</p>
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">Publication Date:</span>
+                        <p class="text-gray-600 text-sm sm:text-base">{{ book.publication_date|date:"M d, Y" }}</p>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">Edition:</span>
-                        <p class="text-gray-600">{{ book.edition|default:"N/A" }}</p>
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">Edition:</span>
+                        <p class="text-gray-600 text-sm sm:text-base">{{ book.edition|default:"N/A" }}</p>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">Pages:</span>
-                        <p class="text-gray-600">{{ book.pages }}</p>
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">Pages:</span>
+                        <p class="text-gray-600 text-sm sm:text-base">{{ book.pages }}</p>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">Language:</span>
-                        <p class="text-gray-600">{{ book.language }}</p>
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">Language:</span>
+                        <p class="text-gray-600 text-sm sm:text-base">{{ book.language }}</p>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">Categories:</span>
-                        <p class="text-gray-600">{{ book.get_categories_display }}</p>
+                        <span class="font-medium text-gray-700 text-sm sm:text-base">Categories:</span>
+                        <p class="text-gray-600 text-sm sm:text-base">{{ book.get_categories_display }}</p>
                     </div>
                 </div>
             </div>
-
-            <!-- Summary -->
-            {% if book.summary %}
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">Summary</h3>
-                <p class="text-gray-600 leading-relaxed">{{ book.summary }}</p>
-            </div>
-            {% endif %}
 
             <!-- Reservations Queue -->
             {% if reservations and user.can_manage_books %}
@@ -196,7 +197,7 @@
 
     <!-- Back Button -->
     <div class="text-center">
-        <a href="{% url 'book_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg">
+        <a href="{% url 'book_list' %}" class="inline-flex items-center bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 sm:px-6 sm:py-2 rounded-lg text-sm sm:text-base transition-colors duration-200">
             <i class="fas fa-arrow-left mr-2"></i>Back to Books
         </a>
     </div>

@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from datetime import timedelta
+from cloudinary_storage.storage import MediaCloudinaryStorage
 import uuid
 
 
@@ -185,7 +186,12 @@ class Book(models.Model):
     categories = models.ManyToManyField(Category, related_name='books')
 
     # Physical details
-    cover_image = models.ImageField(upload_to='book_covers/', blank=True, null=True)
+    cover_image = models.ImageField(
+        upload_to='book_covers/',
+        blank=True,
+        null=True,
+        storage=MediaCloudinaryStorage()
+    )
     physical_description = models.TextField(blank=True, null=True)
 
     # Location details
@@ -413,7 +419,20 @@ class LibrarySettings(models.Model):
     library_address = models.TextField(blank=True, null=True)
     library_phone = models.CharField(max_length=15, blank=True, null=True)
     library_email = models.EmailField(blank=True, null=True)
-    library_logo = models.ImageField(upload_to='library_logos/', blank=True, null=True, help_text="Upload library logo")
+    library_logo = models.ImageField(
+        upload_to='library_logos/',
+        blank=True,
+        null=True,
+        help_text="Upload library logo",
+        storage=MediaCloudinaryStorage()
+    )
+    login_banner = models.ImageField(
+        upload_to='login_banners/',
+        blank=True,
+        null=True,
+        help_text="Upload login page banner image",
+        storage=MediaCloudinaryStorage()
+    )
 
     # Operational settings
     is_active = models.BooleanField(default=True)
@@ -432,6 +451,77 @@ class LibrarySettings(models.Model):
         """Get or create library settings"""
         settings, created = cls.objects.get_or_create(pk=1)
         return settings
+
+
+class ReadingHistory(models.Model):
+    """Track books read by users for achievement and reward system"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reading_history')
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='reading_records')
+    loan = models.OneToOneField(Loan, on_delete=models.CASCADE, related_name='reading_record')
+
+    # Reading details
+    date_borrowed = models.DateTimeField()
+    date_returned = models.DateTimeField()
+    pages_read = models.PositiveIntegerField(default=0)  # From book.pages
+    reading_duration_days = models.PositiveIntegerField(default=0)  # Days between borrow and return
+
+    # Achievement tracking
+    term_period = models.CharField(max_length=50, default='current')  # e.g., 'Term 1 2024', 'current'
+    academic_year = models.CharField(max_length=20, default='2024')
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_returned']
+        indexes = [
+            models.Index(fields=['user', 'term_period']),
+            models.Index(fields=['term_period']),
+            models.Index(fields=['date_returned']),
+        ]
+        unique_together = ['user', 'book', 'loan']  # Prevent duplicates
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} read '{self.book.title}'"
+
+    @classmethod
+    def get_user_stats(cls, user, term_period='current'):
+        """Get reading statistics for a user"""
+        records = cls.objects.filter(user=user, term_period=term_period)
+        return {
+            'total_books': records.count(),
+            'total_pages': records.aggregate(total=models.Sum('pages_read'))['total'] or 0,
+            'avg_reading_time': records.aggregate(avg=models.Avg('reading_duration_days'))['avg'] or 0,
+            'recent_books': records[:5]
+        }
+
+    @classmethod
+    def get_leaderboard(cls, term_period='current', limit=50):
+        """Get reading leaderboard sorted by books read, then pages"""
+        from django.db.models import Count, Sum
+
+        leaderboard = cls.objects.filter(term_period=term_period).values(
+            'user__id',
+            'user__first_name',
+            'user__last_name',
+            'user__enrollment_number',
+            'user__class_grade'
+        ).annotate(
+            total_books=Count('id'),
+            total_pages=Sum('pages_read')
+        ).order_by('-total_books', '-total_pages')[:limit]
+
+        return leaderboard
+
+    @classmethod
+    def reset_term_data(cls, new_term_period):
+        """Reset reading history for new term"""
+        # Archive current term data
+        current_records = cls.objects.filter(term_period='current')
+        current_records.update(term_period=f"archived_{timezone.now().strftime('%Y%m%d')}")
+
+        # The new term starts fresh with term_period='current'
+        return True
 
 
 class AuditLog(models.Model):

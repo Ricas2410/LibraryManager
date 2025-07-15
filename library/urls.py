@@ -2,6 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Health check endpoint
+    path('health/', views.health_check, name='health_check'),
+
     # Authentication
     path('login/', views.custom_login, name='login'),
     path('logout/', views.custom_logout, name='logout'),
@@ -25,6 +28,7 @@ urlpatterns = [
     path('api/notifications/', views.api_notifications, name='api_notifications'),
     path('api/notifications/<uuid:notification_id>/read/', views.api_mark_notification_read, name='api_mark_notification_read'),
     path('api/notifications/mark-all-read/', views.api_mark_all_notifications_read, name='api_mark_all_notifications_read'),
+    path('api/live-search/', views.live_search_api, name='live_search_api'),
 
     # Books
     path('books/', views.book_list, name='book_list'),
@@ -65,6 +69,17 @@ urlpatterns = [
     path('csv-template/', views.download_csv_template, name='download_csv_template'),
     path('import-csv/', views.import_users_csv, name='import_users_csv'),
     path('sync-api/', views.sync_school_api, name='sync_school_api'),
+
+    # Book Import
+    path('books/import/', views.book_import_page, name='book_import_page'),
+    path('books/csv-template/', views.download_books_csv_template, name='download_books_csv_template'),
+    path('books/import-csv/', views.import_books_csv, name='import_books_csv'),
+
+    # Reading History
+    path('reading-history/', views.reading_history, name='reading_history'),
+    path('admin/reading-history/', views.admin_reading_history, name='admin_reading_history'),
+    path('admin/reading-history/student/<uuid:user_id>/', views.student_reading_detail, name='student_reading_detail'),
+    path('admin/reading-history/reset/', views.reset_reading_history, name='reset_reading_history'),
 
     # Settings
     path('settings/', views.library_settings, name='library_settings'),
@@ -110,4 +125,11 @@ urlpatterns = [
     path('api/floors/', views.floor_autocomplete, name='floor_autocomplete'),
     path('api/books/', views.book_autocomplete, name='book_autocomplete'),
     path('api/users/', views.user_autocomplete, name='user_autocomplete'),
+
+    # Admin utilities
+    path('admin/migrate-images/', views.migrate_images_to_cloudinary, name='migrate_images_to_cloudinary'),
+
+    # PIN Change and Password Reset
+    path('change-pin/', views.change_pin, name='change_pin'),
+    path('password-reset-request/', views.password_reset_request, name='password_reset_request'),
 ]

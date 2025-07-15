@@ -3,14 +3,19 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
+from django.core.cache import cache
+from django.core.mail import send_mail
+from django.conf import settings
 from datetime import timedelta
 import json
+import random
+import string
 from functools import wraps
 import subprocess
 import glob
@@ -20,6 +25,8 @@ from .models import (User, Book, Author, Category, Publisher, Loan, Reservation,
                      LibrarySettings, AuditLog, Section, ShelfLocation, Floor, Notification)
 from .forms import (CustomUserCreationForm, CustomAuthenticationForm, UserProfileForm,
                    BookForm, BookSearchForm, LoanForm, ReservationForm, LibrarySettingsForm)
+import cloudinary.uploader
+import requests
 
 
 # Custom decorator for API endpoints
@@ -322,6 +329,9 @@ def register_user(request):
                 ip_address=request.META.get('REMOTE_ADDR')
             )
 
+            # Clear cache to ensure user list updates immediately
+            cache.clear()
+
             messages.success(request, f'User {user.username} created successfully!')
             return redirect('user_list')
     else:
@@ -398,10 +408,14 @@ def book_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    # Get all categories for the filter dropdown
+    categories = Category.objects.all().order_by('name')
+
     context = {
         'form': form,
         'page_obj': page_obj,
         'books': page_obj,
+        'categories': categories,
     }
 
     return render(request, 'library/book_list.html', context)
@@ -464,6 +478,9 @@ def book_add(request):
                 ip_address=request.META.get('REMOTE_ADDR')
             )
 
+            # Clear cache to ensure book list updates immediately
+            cache.clear()
+
             messages.success(request, f'Book "{book.title}" added successfully!')
             return redirect('book_detail', book_id=book.id)
     else:
@@ -490,6 +507,9 @@ def book_edit(request, book_id):
                 description=f"Book '{book.title}' updated by {request.user.username}",
                 ip_address=request.META.get('REMOTE_ADDR')
             )
+
+            # Clear cache to ensure book list updates immediately
+            cache.clear()
 
             messages.success(request, f'Book "{book.title}" updated successfully!')
             return redirect('book_detail', book_id=book.id)
@@ -521,6 +541,10 @@ def book_delete(request, book_id):
         )
 
         book.delete()
+
+        # Clear cache to ensure book list updates immediately
+        cache.clear()
+
         messages.success(request, f'Book "{book_title}" deleted successfully!')
         return redirect('book_list')
 
@@ -612,6 +636,9 @@ def user_edit(request, user_id):
                 description=f"User {user_obj.username} updated by {request.user.username}",
                 ip_address=request.META.get('REMOTE_ADDR')
             )
+
+            # Clear cache to ensure user list updates immediately
+            cache.clear()
 
             messages.success(request, f'User {user_obj.username} updated successfully!')
             return redirect('user_detail', user_id=user_obj.id)
@@ -740,6 +767,25 @@ def loan_return(request, loan_id):
         book = loan.book
         book.available_copies += 1
         book.update_availability()
+
+        # Create reading history record
+        from library.models import ReadingHistory
+        reading_duration = (loan.return_date - loan.issue_date).days
+
+        # Create or update reading history
+        reading_record, created = ReadingHistory.objects.get_or_create(
+            user=loan.borrower,
+            book=book,
+            loan=loan,
+            defaults={
+                'date_borrowed': loan.issue_date,
+                'date_returned': loan.return_date,
+                'pages_read': book.pages or 0,
+                'reading_duration_days': max(reading_duration, 1),  # At least 1 day
+                'term_period': 'current',
+                'academic_year': str(timezone.now().year)
+            }
+        )
 
         # Check for reservations and notify
         next_reservation = Reservation.objects.filter(
@@ -2529,15 +2575,20 @@ def create_notification(user, title, message, notification_type='general', book=
 
 
 def send_email_notification(user, subject, message, send_to_additional_email=True):
-    """Send email notification to user and optionally to their additional notification email"""
+    """Send email notification to parent/guardian email only (student emails are not active)"""
     from django.core.mail import send_mail
     from django.conf import settings
 
-    recipients = [user.email]
+    recipients = []
 
-    # Add additional notification email if provided and requested
+    # Only send to parent/guardian email if provided since student emails are not active
     if send_to_additional_email and user.notification_email:
         recipients.append(user.notification_email)
+
+    # If no parent email, skip sending (student emails are not active)
+    if not recipients:
+        print(f"No parent/guardian email for {user.username}, skipping email notification")
+        return False
 
     try:
         send_mail(
@@ -2683,18 +2734,18 @@ def reports_dashboard(request):
 
     # Loans in date range
     loans_in_range = Loan.objects.filter(
-        loan_date__date__range=[start_date, end_date]
+        issue_date__date__range=[start_date, end_date]
     )
 
     # Popular books (most borrowed)
     popular_books = Book.objects.annotate(
-        loan_count=Count('loan')
+        loan_count=Count('loans')
     ).order_by('-loan_count')[:10]
 
     # Category statistics
     category_stats = Category.objects.annotate(
-        book_count=Count('book'),
-        loan_count=Count('book__loan')
+        book_count=Count('books'),
+        loan_count=Count('books__loans')
     ).order_by('-loan_count')[:10]
 
     # Monthly loan trends (last 12 months)
@@ -2703,15 +2754,25 @@ def reports_dashboard(request):
         month_start = timezone.now().replace(day=1) - timedelta(days=30*i)
         month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
         loan_count = Loan.objects.filter(
-            loan_date__date__range=[month_start.date(), month_end.date()]
+            issue_date__date__range=[month_start.date(), month_end.date()]
         ).count()
         monthly_loans.append({
             'month': month_start.strftime('%B %Y'),
-            'count': loan_count
+            'loans': loan_count
         })
     monthly_loans.reverse()
 
+    # Create stats dictionary for template
+    stats = {
+        'total_books': total_books,
+        'total_users': total_users,
+        'active_loans': active_loans,
+        'overdue_loans': overdue_loans,
+        'loans_in_range': loans_in_range.count(),
+    }
+
     context = {
+        'stats': stats,
         'total_books': total_books,
         'total_users': total_users,
         'active_loans': active_loans,
@@ -2742,10 +2803,10 @@ def export_loans_report(request):
     loans = Loan.objects.all()
     if start_date:
         start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
-        loans = loans.filter(loan_date__date__gte=start_date)
+        loans = loans.filter(issue_date__date__gte=start_date)
     if end_date:
         end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
-        loans = loans.filter(loan_date__date__lte=end_date)
+        loans = loans.filter(issue_date__date__lte=end_date)
 
     # Create CSV response
     response = HttpResponse(content_type='text/csv')
@@ -2764,11 +2825,11 @@ def export_loans_report(request):
             loan.book.isbn or 'N/A',
             loan.borrower.get_full_name(),
             loan.borrower.student_id or 'N/A',
-            loan.loan_date.strftime('%Y-%m-%d'),
+            loan.issue_date.strftime('%Y-%m-%d'),
             loan.due_date.strftime('%Y-%m-%d'),
             loan.return_date.strftime('%Y-%m-%d') if loan.return_date else 'Not Returned',
             loan.status.title(),
-            loan.renewals
+            loan.renewal_count
         ])
 
     return response
@@ -2797,8 +2858,8 @@ def export_books_report(request):
 
     for book in books:
         # Calculate statistics
-        total_loans = book.loan_set.count()
-        active_loans = book.loan_set.filter(status='active').count()
+        total_loans = book.loans.count()
+        active_loans = book.loans.filter(status='active').count()
         available_copies = book.total_copies - active_loans
 
         writer.writerow([
@@ -2837,7 +2898,7 @@ def advanced_search(request):
         books = books.filter(
             Q(title__icontains=query) |
             Q(isbn__icontains=query) |
-            Q(description__icontains=query)
+            Q(summary__icontains=query)
         )
 
     if category:
@@ -2900,6 +2961,83 @@ def advanced_search(request):
     return render(request, 'library/advanced_search.html', context)
 
 
+def live_search_api(request):
+    """API endpoint for live search functionality"""
+    query = request.GET.get('q', '').strip()
+    search_type = request.GET.get('type', 'books')
+
+    if len(query) < 2:
+        return JsonResponse({'books': [], 'users': [], 'loans': []})
+
+    book_results = []
+    user_results = []
+    loan_results = []
+
+    # Search books
+    if search_type in ['books', 'all']:
+        books = Book.objects.filter(
+            Q(title__icontains=query) |
+            Q(authors__first_name__icontains=query) |
+            Q(authors__last_name__icontains=query) |
+            Q(isbn__icontains=query) |
+            Q(publisher__name__icontains=query)
+        ).select_related('publisher').prefetch_related('authors').distinct()[:8]
+
+        for book in books:
+            authors = ', '.join([f"{author.first_name} {author.last_name}" for author in book.authors.all()])
+            book_results.append({
+                'id': str(book.id),
+                'title': book.title,
+                'authors': authors,
+                'available': book.available_copies > 0,
+                'isbn': book.isbn,
+                'publisher': book.publisher.name if book.publisher else 'Unknown'
+            })
+
+    # Search users (only for admin/librarian)
+    if (search_type in ['users', 'all']) and (request.user.role in ['admin', 'librarian'] or request.user.is_superuser):
+        users = User.objects.filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(username__icontains=query) |
+            Q(email__icontains=query)
+        )[:8]
+
+        for user in users:
+            user_results.append({
+                'id': str(user.id),
+                'name': user.get_full_name() or user.username,
+                'email': user.email,
+                'role': user.get_role_display(),
+                'username': user.username
+            })
+
+    # Search loans (only for admin/librarian)
+    if (search_type in ['loans', 'all']) and (request.user.role in ['admin', 'librarian'] or request.user.is_superuser):
+        loans = Loan.objects.filter(
+            Q(book__title__icontains=query) |
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query) |
+            Q(user__username__icontains=query)
+        ).select_related('book', 'user').distinct()[:8]
+
+        for loan in loans:
+            loan_results.append({
+                'id': str(loan.id),
+                'book_title': loan.book.title,
+                'borrower_name': loan.user.get_full_name() or loan.user.username,
+                'status': loan.status,
+                'due_date': loan.due_date.strftime('%Y-%m-%d') if loan.due_date else None,
+                'is_overdue': loan.is_overdue if hasattr(loan, 'is_overdue') else False
+            })
+
+    return JsonResponse({
+        'books': book_results,
+        'users': user_results,
+        'loans': loan_results
+    })
+
+
 @login_required
 @user_passes_test(is_librarian_or_admin)
 def user_management(request):
@@ -2953,18 +3091,22 @@ def download_csv_template(request):
 
     writer = csv.writer(response)
     writer.writerow([
-        'first_name', 'last_name', 'email', 'student_id', 'role',
-        'phone_number', 'address', 'additional_notification_email'
+        'first_name', 'last_name', 'student_id', 'role', 'phone_number',
+        'address', 'class_grade', 'parent_email'
     ])
 
-    # Add sample data
+    # Add sample data with instructions
     writer.writerow([
-        'John', 'Doe', 'john.doe@example.com', 'STU001', 'student',
-        '+1234567890', '123 Main St', 'parent@example.com'
+        'Asare', 'Appiah', '1001', 'student', '+233123456789',
+        '123 Main St, Accra', '5A', 'parent1@gmail.com'
     ])
     writer.writerow([
-        'Jane', 'Smith', 'jane.smith@example.com', 'STU002', 'student',
-        '+1234567891', '456 Oak Ave', 'guardian@example.com'
+        'Akosua', 'Mensah', '1002', 'student', '+233987654321',
+        '456 Oak Ave, Kumasi', '6B', 'akosua.parent@yahoo.com'
+    ])
+    writer.writerow([
+        'John', 'Smith', 'TCH001', 'teacher', '+233555123456',
+        'Teacher Quarters', '', ''
     ])
 
     return response
@@ -2973,7 +3115,7 @@ def download_csv_template(request):
 @login_required
 @user_passes_test(is_librarian_or_admin)
 def import_users_csv(request):
-    """Import users from CSV file"""
+    """Import users from CSV file with automatic email generation and PIN setup"""
     if request.method == 'POST':
         csv_file = request.FILES.get('csv_file')
 
@@ -2988,6 +3130,7 @@ def import_users_csv(request):
         try:
             import csv
             import io
+            from django.contrib.auth.hashers import make_password
 
             # Read CSV file
             file_data = csv_file.read().decode('utf-8')
@@ -2999,31 +3142,71 @@ def import_users_csv(request):
 
             for row_num, row in enumerate(csv_data, start=2):
                 try:
-                    # Validate required fields
-                    if not all([row.get('first_name'), row.get('last_name'), row.get('email')]):
-                        errors.append(f"Row {row_num}: Missing required fields (first_name, last_name, email)")
+                    # Validate required fields with robust checking
+                    first_name = row.get('first_name', '').strip()
+                    last_name = row.get('last_name', '').strip()
+                    student_id = row.get('student_id', '').strip()
+
+                    if not all([first_name, last_name, student_id]):
+                        errors.append(f"Row {row_num}: Missing required fields (first_name, last_name, student_id)")
                         error_count += 1
                         continue
 
-                    # Check if user already exists
-                    if User.objects.filter(email=row['email']).exists():
-                        errors.append(f"Row {row_num}: User with email {row['email']} already exists")
+                    
+                                        # Generate email from first initial + last name
+                                        first_initial = first_name[0].lower() if first_name else 'x'
+                                        clean_last_name = last_name.lower().replace(' ', '') if last_name else 'user'
+                                        email_username = f"{first_initial}{clean_last_name}"
+                    
+                                        # Handle duplicate emails
+                                        count = 1
+                                        while User.objects.filter(email=f"{email_username}{'' if count == 1 else str(count).zfill(2)}@deigratiams.edu.gh").exists():
+                                            count += 1
+                                        if count > 1:
+                                            email_username = f"{email_username}{str(count).zfill(2)}"
+                    
+                                        email = f"{email_username}@deigratiams.edu.gh"
+                    # Generate username from student_id (normalize it)
+                    username = student_id.lower()
+
+                    # Check if user already exists by student_id or email
+                    if User.objects.filter(Q(enrollment_number=student_id) | Q(email=email) | Q(username=username)).exists():
+                        errors.append(f"Row {row_num}: User with ID {student_id} or email {email} already exists")
                         error_count += 1
                         continue
 
-                    # Create user
-                    user = User.objects.create_user(
-                        username=row['email'],
-                        email=row['email'],
-                        first_name=row['first_name'],
-                        last_name=row['last_name'],
-                        student_id=row.get('student_id', ''),
-                        role=row.get('role', 'student'),
-                        phone_number=row.get('phone_number', ''),
-                        address=row.get('address', ''),
-                        additional_notification_email=row.get('additional_notification_email', ''),
-                        password='defaultpassword123'  # Users should change this
+                    # Get parent email if provided (safe handling)
+                    parent_email = row.get('parent_email', '').strip()
+
+                    # Get role with safe handling
+                    role = row.get('role', 'student').strip().lower()
+                    if role not in ['student', 'teacher', 'librarian', 'admin']:
+                        role = 'student'  # Default fallback
+
+                    # Create user with PIN 12345 (with error handling)
+                    user = User.objects.create(
+                        username=username,
+                        email=email,
+                        first_name=first_name,
+                        last_name=last_name,
+                        enrollment_number=student_id,
+                        role=role,
+                        phone_number=row.get('phone_number', '').strip(),
+                        address=row.get('address', '').strip(),
+                        class_grade=row.get('class_grade', '').strip(),
+                        notification_email=parent_email if parent_email else None,
+                        password=make_password('12345'),  # Default PIN
+                        is_active_member=True
                     )
+
+                    # Send welcome email to parent if email provided (with error handling)
+                    if parent_email and role == 'student':
+                        try:
+                            send_parent_welcome_email(user, parent_email)
+                        except Exception as email_error:
+                            # Don't fail the import if email fails
+                            print(f"Warning: Failed to send parent email for {user.get_full_name()}: {email_error}")
+
                     created_count += 1
 
                 except Exception as e:
@@ -3032,7 +3215,9 @@ def import_users_csv(request):
 
             # Show results
             if created_count > 0:
-                messages.success(request, f'Successfully imported {created_count} users.')
+                # Clear cache to ensure user list updates immediately
+                cache.clear()
+                messages.success(request, f'Successfully imported {created_count} users. All users have been assigned emails with @deigratiams.edu.gh domain and default PIN: 12345')
 
             if error_count > 0:
                 error_message = f'{error_count} errors occurred during import:\n' + '\n'.join(errors[:10])
@@ -3044,6 +3229,62 @@ def import_users_csv(request):
             messages.error(request, f'Error processing CSV file: {str(e)}')
 
     return redirect('user_management')
+
+
+def send_parent_welcome_email(user, parent_email):
+    """Send welcome email to parent with student's library account details"""
+    try:
+        from django.core.mail import send_mail
+        from django.conf import settings
+
+        subject = f"Library Account Created for {user.get_full_name()}"
+
+        message = f"""Dear Parent/Guardian,
+
+A library account has been created for your ward {user.get_full_name()}.
+
+Student Details:
+- Name: {user.get_full_name()}
+- Student ID: {user.enrollment_number}
+- Email: {user.email}
+- Login PIN: 12345 (can be changed later)
+- Class: {user.class_grade or 'Not specified'}
+
+Login Instructions:
+Your ward can login to the library system using:
+- Student ID: {user.enrollment_number} (or just the number part)
+- Email: {user.email} (or just the username part)
+- PIN: 12345
+
+Library Rules & Guidelines:
+1. Books can be borrowed for up to 14 days
+2. Maximum of 5 books can be borrowed at a time
+3. Late returns may result in borrowing restrictions
+4. Lost or damaged books must be reported immediately
+5. Students must return books before vacation periods
+
+How to Access:
+Visit the library or use the online system to browse and request books.
+
+For any questions or concerns, please contact the school library.
+
+Best regards,
+{getattr(settings, 'DEFAULT_FROM_EMAIL', 'Library Team')}
+School Library Management System"""
+
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [parent_email],
+            fail_silently=True,
+        )
+
+    except Exception as e:
+        # Log error but don't fail the import
+        print(f"Failed to send parent email: {e}")
+
+
 
 
 @login_required
@@ -3174,3 +3415,544 @@ def restore_system(request):
             messages.error(request, f'Error restoring from backup: {str(e)}')
 
     return redirect('library_settings')
+
+
+@login_required
+@user_passes_test(can_manage_books)
+def download_books_csv_template(request):
+    """Download CSV template for book import - Simple version with only essential fields"""
+    import csv
+    from django.http import HttpResponse
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="books_import_template.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'title', 'authors', 'categories', 'pages', 'total_copies', 'description'
+    ])
+
+    # Add sample data with clear examples
+    writer.writerow([
+        'Introduction to Mathematics', 'John Smith', 'Mathematics', '250', '3', 'Basic mathematics for primary school students'
+    ])
+    writer.writerow([
+        'English Grammar Book', 'Jane Doe;Mary Johnson', 'English;Language', '180', '5', 'Comprehensive English grammar guide'
+    ])
+    writer.writerow([
+        'Science Experiments', 'Dr. Robert Wilson', 'Science;Experiments', '320', '2', ''
+    ])
+
+    return response
+
+
+@login_required
+@user_passes_test(can_manage_books)
+def import_books_csv(request):
+    """Import books from CSV file"""
+    if request.method == 'POST':
+        csv_file = request.FILES.get('csv_file')
+
+        if not csv_file:
+            messages.error(request, 'Please select a CSV file.')
+            return redirect('book_import_page')
+
+        if not csv_file.name.endswith('.csv'):
+            messages.error(request, 'Please upload a valid CSV file.')
+            return redirect('book_import_page')
+
+        try:
+            import csv
+            import io
+            from datetime import datetime
+            from decimal import Decimal, InvalidOperation
+
+            # Read CSV file
+            file_data = csv_file.read().decode('utf-8')
+            csv_data = csv.DictReader(io.StringIO(file_data))
+
+            created_count = 0
+            error_count = 0
+            errors = []
+
+            for row_num, row in enumerate(csv_data, start=2):
+                try:
+                    # Validate required fields - only the essentials
+                    title = row.get('title', '').strip()
+                    authors = row.get('authors', '').strip()
+                    categories = row.get('categories', '').strip()
+                    pages_str = row.get('pages', '').strip()
+
+                    if not all([title, authors, categories, pages_str]):
+                        errors.append(f"Row {row_num}: Missing required fields (title, authors, categories, pages)")
+                        error_count += 1
+                        continue
+
+                    # Check if book already exists by title
+                    existing_book = Book.objects.filter(title__iexact=title).first()
+                    if existing_book:
+                        errors.append(f"Row {row_num}: Book '{title}' already exists")
+                        error_count += 1
+                        continue
+
+                    # Parse pages with robust error handling
+                    try:
+                        pages = int(pages_str)
+                        if pages <= 0:
+                            pages = 100  # Default fallback
+                    except (ValueError, TypeError):
+                        pages = 100  # Default fallback
+
+                    # Parse total copies with robust error handling
+                    total_copies = 1  # Default to 1 copy
+                    total_copies_str = row.get('total_copies', '').strip()
+                    if total_copies_str:
+                        try:
+                            total_copies = int(total_copies_str)
+                            if total_copies <= 0:
+                                total_copies = 1
+                        except (ValueError, TypeError):
+                            total_copies = 1  # Default fallback
+
+                    # Generate auto ISBN for books without ISBN (common for basic school books)
+                    import uuid
+                    auto_isbn = f"AUTO-{str(uuid.uuid4())[:8].upper()}"
+
+                    # Create book with defaults for missing fields
+                    book = Book.objects.create(
+                        title=title,
+                        isbn=auto_isbn,  # Auto-generated ISBN for basic school books
+                        pages=pages,
+                        language='English',  # Default language
+                        summary=row.get('description', '').strip(),  # Use description if provided
+                        total_copies=total_copies,
+                        available_copies=total_copies,
+                        publication_date=None,  # Can be set later by admin
+                        price=None,  # Can be set later by admin
+                        created_by=request.user
+                    )
+
+                    # Set default publisher (can be edited later by admin)
+                    default_publisher, created = Publisher.objects.get_or_create(
+                        name='School Library',
+                        defaults={'address': 'School Address', 'email': '', 'phone': '', 'website': ''}
+                    )
+                    book.publisher = default_publisher
+
+                    # Handle authors (semicolon separated for multiple authors)
+                    authors_str = row.get('authors', '').strip()
+                    if authors_str:
+                        author_names = [name.strip() for name in authors_str.split(';')]
+                        for author_name in author_names:
+                            if author_name:
+                                # Split first and last name
+                                name_parts = author_name.split()
+                                if len(name_parts) >= 2:
+                                    first_name = name_parts[0]
+                                    last_name = ' '.join(name_parts[1:])
+                                else:
+                                    first_name = author_name
+                                    last_name = ''
+
+                                author, created = Author.objects.get_or_create(
+                                    first_name=first_name,
+                                    last_name=last_name,
+                                    defaults={'nationality': '', 'biography': ''}
+                                )
+                                book.authors.add(author)
+
+                    # Handle categories (semicolon separated for multiple categories)
+                    categories_str = row.get('categories', '').strip()
+                    if categories_str:
+                        category_names = [name.strip() for name in categories_str.split(';')]
+                        for category_name in category_names:
+                            if category_name:
+                                category, created = Category.objects.get_or_create(
+                                    name=category_name,
+                                    defaults={'description': f'{category_name} books'}
+                                )
+                                book.categories.add(category)
+
+                    book.save()
+                    created_count += 1
+
+                    # Log the book addition
+                    AuditLog.objects.create(
+                        action='book_added',
+                        user=request.user,
+                        book=book,
+                        description=f"Book '{book.title}' imported via CSV by {request.user.username}",
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    error_count += 1
+
+            # Show results
+            if created_count > 0:
+                # Clear cache to ensure book list updates immediately
+                cache.clear()
+                messages.success(request, f'Successfully imported {created_count} books.')
+
+            if error_count > 0:
+                error_message = f'{error_count} errors occurred during import:\n' + '\n'.join(errors[:10])
+                if len(errors) > 10:
+                    error_message += f'\n... and {len(errors) - 10} more errors.'
+                messages.error(request, error_message)
+
+        except Exception as e:
+            messages.error(request, f'Error processing CSV file: {str(e)}')
+
+    return redirect('book_import_page')
+
+
+@login_required
+@user_passes_test(can_manage_books)
+def book_import_page(request):
+    """Book import page"""
+    return render(request, 'library/book_import.html')
+
+
+@login_required
+@user_passes_test(is_admin)
+def migrate_images_to_cloudinary(request):
+    """Migrate existing images to Cloudinary"""
+    if request.method == 'POST':
+        try:
+            # Migrate book cover images
+            books_with_images = Book.objects.filter(cover_image__isnull=False)
+            migrated_books = 0
+
+            for book in books_with_images:
+                image_path = str(book.cover_image)
+
+                # Skip if already migrated (doesn't start with local path)
+                if not image_path.startswith('book_covers/'):
+                    continue
+
+                try:
+                    # Create a placeholder Cloudinary URL for now
+                    # In a real migration, you'd upload the actual file
+                    filename = image_path.split('/')[-1]
+                    name_without_ext = filename.split('.')[0]
+
+                    # For now, just update the path to work with Cloudinary
+                    book.cover_image = f"book_covers/{name_without_ext}.jpg"
+                    book.save()
+                    migrated_books += 1
+
+                except Exception as e:
+                    print(f"Error migrating {book.title}: {str(e)}")
+
+            messages.success(request, f'Successfully migrated {migrated_books} book cover images to Cloudinary!')
+
+        except Exception as e:
+            messages.error(request, f'Error during migration: {str(e)}')
+
+    return redirect('admin_dashboard')
+
+
+@login_required
+def reading_history(request):
+    """Student's personal reading history"""
+    from library.models import ReadingHistory
+
+    # Get user's reading history
+    history = ReadingHistory.objects.filter(
+        user=request.user,
+        term_period='current'
+    ).select_related('book').order_by('-date_returned')
+
+    # Get user stats
+    stats = ReadingHistory.get_user_stats(request.user)
+
+    # Pagination
+    paginator = Paginator(history, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'history': page_obj,
+        'stats': stats,
+        'page_title': 'My Reading History',
+    }
+
+    return render(request, 'library/reading_history.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.can_manage_books())
+def admin_reading_history(request):
+    """Admin view of all students' reading history with leaderboard"""
+    from library.models import ReadingHistory
+    from django.db.models import Q
+
+    # Search functionality
+    search_query = request.GET.get('search', '').strip()
+
+    # Get leaderboard
+    leaderboard = ReadingHistory.get_leaderboard(limit=100)
+
+    # Apply search filter if provided
+    if search_query:
+        # Search by name, student ID, or class
+        leaderboard = [
+            entry for entry in leaderboard
+            if (search_query.lower() in f"{entry['user__first_name']} {entry['user__last_name']}".lower() or
+                search_query.lower() in entry['user__enrollment_number'].lower() or
+                search_query.lower() in (entry['user__class_grade'] or '').lower())
+        ]
+
+    # Pagination
+    paginator = Paginator(leaderboard, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Get overall stats
+    total_students = len(set(entry['user__id'] for entry in ReadingHistory.get_leaderboard(limit=1000)))
+    total_books_read = ReadingHistory.objects.filter(term_period='current').count()
+    total_pages_read = ReadingHistory.objects.filter(term_period='current').aggregate(
+        total=Sum('pages_read')
+    )['total'] or 0
+
+    context = {
+        'leaderboard': page_obj,
+        'search_query': search_query,
+        'total_students': total_students,
+        'total_books_read': total_books_read,
+        'total_pages_read': total_pages_read,
+        'page_title': 'Reading History & Leaderboard',
+    }
+
+    return render(request, 'library/admin_reading_history.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.can_manage_books())
+def student_reading_detail(request, user_id):
+    """Detailed reading history for a specific student"""
+    from library.models import ReadingHistory
+
+    student = get_object_or_404(User, id=user_id)
+
+    # Get student's reading history
+    history = ReadingHistory.objects.filter(
+        user=student,
+        term_period='current'
+    ).select_related('book').order_by('-date_returned')
+
+    # Sort options
+    sort_by = request.GET.get('sort', 'date')
+    if sort_by == 'title':
+        history = history.order_by('book__title')
+    elif sort_by == 'pages':
+        history = history.order_by('-pages_read')
+    elif sort_by == 'duration':
+        history = history.order_by('-reading_duration_days')
+    else:  # default to date
+        history = history.order_by('-date_returned')
+
+    # Get student stats
+    stats = ReadingHistory.get_user_stats(student)
+
+    # Pagination
+    paginator = Paginator(history, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'student': student,
+        'history': page_obj,
+        'stats': stats,
+        'sort_by': sort_by,
+        'page_title': f"Reading History - {student.get_full_name()}",
+    }
+
+    return render(request, 'library/student_reading_detail.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.can_manage_books())
+def reset_reading_history(request):
+    """Reset reading history for new term"""
+    if request.method == 'POST':
+        new_term = request.POST.get('new_term_name', f"Term {timezone.now().strftime('%Y-%m')}")
+
+        try:
+            from library.models import ReadingHistory
+
+            # Reset the reading history
+            ReadingHistory.reset_term_data(new_term)
+
+            # Log the action
+            AuditLog.objects.create(
+                action='reading_history_reset',
+                user=request.user,
+                description=f"Reading history reset for new term: {new_term}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
+            messages.success(request, f'Reading history has been reset for new term: {new_term}')
+
+        except Exception as e:
+            messages.error(request, f'Error resetting reading history: {str(e)}')
+
+    return redirect('admin_reading_history')
+
+
+def health_check(request):
+    """Health check endpoint for deployment platforms"""
+    return JsonResponse({
+        'status': 'healthy',
+        'timestamp': timezone.now().isoformat(),
+        'service': 'Library Management System'
+    })
+
+
+# PIN Change and Password Reset Views
+
+
+@login_required
+@require_http_methods(["POST"])
+def change_pin(request):
+    """Change user PIN (normal password change - no email verification needed)"""
+    try:
+        print(f"PIN change request from user: {request.user.username}")
+        data = json.loads(request.body)
+        current_pin = data.get('current_pin')
+        new_pin = data.get('new_pin')
+
+        print(f"Current PIN provided: {'Yes' if current_pin else 'No'}")
+        print(f"New PIN provided: {'Yes' if new_pin else 'No'}")
+
+        user = request.user
+
+        # Verify current PIN
+        if not user.check_password(current_pin):
+            print("Current PIN verification failed")
+            return JsonResponse({'success': False, 'message': 'Current PIN is incorrect'})
+
+        print("Current PIN verified successfully")
+
+        # Validate new PIN
+        if len(new_pin) < 4:
+            print(f"New PIN too short: {len(new_pin)} characters")
+            return JsonResponse({'success': False, 'message': 'PIN must be at least 4 characters long'})
+
+        print("New PIN validation passed")
+
+        # Change PIN
+        user.set_password(new_pin)
+        user.save()
+
+        print("PIN changed and saved successfully")
+
+        # Log the PIN change
+        AuditLog.objects.create(
+            action='pin_changed',
+            user=user,
+            target_user=user,
+            description=f"PIN changed by {user.username}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
+        print("Audit log created successfully")
+
+        return JsonResponse({'success': True, 'message': 'PIN changed successfully'})
+
+    except Exception as e:
+        print(f"Error in change_pin view: {str(e)}")
+        return JsonResponse({'success': False, 'message': f'Error changing PIN: {str(e)}'})
+
+
+@require_http_methods(["POST"])
+def password_reset_request(request):
+    """Handle password reset requests"""
+    try:
+        data = json.loads(request.body)
+        identifier = data.get('identifier', '').strip()
+
+        if not identifier:
+            return JsonResponse({'success': False, 'message': 'Please provide student ID or username'})
+
+        # Try to find user by enrollment number or username
+        user = None
+        try:
+            # Try enrollment number first (with or without STU prefix)
+            if identifier.isdigit():
+                user = User.objects.get(enrollment_number=identifier)
+            elif identifier.upper().startswith('STU'):
+                user = User.objects.get(enrollment_number=identifier[3:])
+            else:
+                # Try username
+                user = User.objects.get(username=identifier)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'User not found'})
+
+        # Check if user has parent email
+        if not user.notification_email:
+            return JsonResponse({
+                'success': True,
+                'has_parent_email': False,
+                'message': 'No parent/guardian email on file'
+            })
+
+        # Generate reset token
+        reset_token = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+
+        # Store reset token in cache for 30 minutes
+        cache_key = f'password_reset_{user.id}'
+        cache.set(cache_key, reset_token, 1800)  # 30 minutes
+
+        # Send email to parent/guardian
+        subject = f'Password Reset Request - {user.get_full_name()}'
+        message = f"""
+Dear Parent/Guardian,
+
+A password reset has been requested for your child {user.get_full_name()} ({user.enrollment_number or user.username}) in the Library Management System.
+
+To complete the password reset, please contact the school administration with this reference code: {reset_token[:8]}
+
+Contact Information:
+- Administrator: admin@deigratiams.edu.gh
+- IT Service Team: it@deigratiams.edu.gh
+
+The administrator will verify your identity and reset the password for your child.
+
+If you did not request this reset, please contact the school immediately.
+
+Best regards,
+Library Management System
+Dei Gratia Memorial School
+        """
+
+        try:
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.notification_email],
+                fail_silently=False,
+            )
+
+            # Log the reset request
+            AuditLog.objects.create(
+                action='password_reset_requested',
+                target_user=user,
+                description=f"Password reset requested for {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
+            return JsonResponse({
+                'success': True,
+                'has_parent_email': True,
+                'parent_email': user.notification_email,
+                'message': 'Reset instructions sent to parent email'
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': 'Failed to send reset email'})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': 'Error processing reset request'})

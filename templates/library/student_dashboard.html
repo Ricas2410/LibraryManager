@@ -1,22 +1,23 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load library_extras %}
 
-{% block title %}Student Dashboard - Library Management System{% endblock %}
+{% block title %}Student Dashboard - {{ library_settings.library_name|default:"Library Management System" }}{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
-    <div class="mb-8">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900">My Library Dashboard</h1>
-                <p class="text-gray-600 mt-2">Welcome back, {{ user.get_full_name }}!</p>
+    <div class="mb-6 sm:mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+            <div class="text-center sm:text-left">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">My Library Dashboard</h1>
+                <p class="text-gray-600 mt-2 text-sm sm:text-base">Welcome back, {{ user.get_full_name }}!</p>
             </div>
-            <div class="flex space-x-4">
-                <a href="{% url 'book_list' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                <a href="{% url 'book_list' %}" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-3 sm:px-6 sm:py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-center text-sm sm:text-base">
                     <i class="fas fa-search mr-2"></i>Browse Books
                 </a>
-                <a href="{% url 'profile' %}" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm">
+                <a href="{% url 'profile' %}" class="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 py-3 sm:px-6 sm:py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-center text-sm sm:text-base">
                     <i class="fas fa-user mr-2"></i>My Profile
                 </a>
             </div>
@@ -25,58 +26,58 @@
 
     <!-- Statistics Cards -->
     <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-book text-blue-600 text-xl"></i>
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg border border-blue-200 p-4 sm:p-6 hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1">
+            <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left">
+                <div class="flex-shrink-0 mb-2 sm:mb-0">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-md">
+                        <i class="fas fa-book text-white text-lg sm:text-xl"></i>
                     </div>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Active Loans</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ stats.active_loans }}</p>
+                <div class="sm:ml-4">
+                    <p class="text-xs sm:text-sm font-medium text-blue-700">Active Loans</p>
+                    <p class="text-xl sm:text-2xl font-bold text-blue-900">{{ stats.active_loans }}</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-history text-green-600 text-xl"></i>
+        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-lg border border-green-200 p-4 sm:p-6 hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1">
+            <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left">
+                <div class="flex-shrink-0 mb-2 sm:mb-0">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-md">
+                        <i class="fas fa-history text-white text-lg sm:text-xl"></i>
                     </div>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Borrowed</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ stats.total_loans }}</p>
+                <div class="sm:ml-4">
+                    <p class="text-xs sm:text-sm font-medium text-green-700">Total Borrowed</p>
+                    <p class="text-xl sm:text-2xl font-bold text-green-900">{{ stats.total_loans }}</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-clock text-yellow-600 text-xl"></i>
+        <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl shadow-lg border border-yellow-200 p-4 sm:p-6 hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1">
+            <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left">
+                <div class="flex-shrink-0 mb-2 sm:mb-0">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-500 rounded-xl flex items-center justify-center shadow-md">
+                        <i class="fas fa-clock text-white text-lg sm:text-xl"></i>
                     </div>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Overdue</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ stats.overdue_loans }}</p>
+                <div class="sm:ml-4">
+                    <p class="text-xs sm:text-sm font-medium text-yellow-700">Overdue</p>
+                    <p class="text-xl sm:text-2xl font-bold text-yellow-900">{{ stats.overdue_loans }}</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-hourglass-half text-orange-600 text-xl"></i>
+        <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl shadow-lg border border-orange-200 p-4 sm:p-6 hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1">
+            <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left">
+                <div class="flex-shrink-0 mb-2 sm:mb-0">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                        <i class="fas fa-hourglass-half text-white text-lg sm:text-xl"></i>
                     </div>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Pending Requests</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ stats.pending_requests }}</p>
+                <div class="sm:ml-4">
+                    <p class="text-xs sm:text-sm font-medium text-orange-700">Pending Requests</p>
+                    <p class="text-xl sm:text-2xl font-bold text-orange-900">{{ stats.pending_requests }}</p>
                 </div>
             </div>
         </div>
@@ -160,7 +161,7 @@
                                 <div class="flex items-start space-x-4">
                                     <div class="flex-shrink-0">
                                         {% if book.cover_image %}
-                                            <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="w-16 h-20 object-cover rounded">
+                                            <img src="{{ book.cover_image|cloudinary_url }}" alt="{{ book.title }}" class="w-16 h-20 object-cover rounded">
                                         {% else %}
                                             <div class="w-16 h-20 bg-gray-200 rounded flex items-center justify-center">
                                                 <i class="fas fa-book text-gray-400"></i>
@@ -267,13 +268,73 @@
                 </div>
             </div>
 
+            <!-- Quick Links -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="px-4 py-4 sm:px-6 sm:py-4 border-b border-gray-200">
+                    <h2 class="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-rocket mr-2 sm:mr-3 text-blue-600"></i>
+                        Quick Actions
+                    </h2>
+                </div>
+                <div class="p-4 sm:p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        <!-- Browse Books -->
+                        <a href="{% url 'book_list' %}" class="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl p-4 sm:p-5 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center mr-4 group-hover:bg-opacity-30 transition-all duration-300">
+                                    <i class="fas fa-search text-white text-lg"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-white text-sm sm:text-base">Browse Books</h3>
+                                    <p class="text-blue-100 text-xs sm:text-sm">Find new books to read</p>
+                                </div>
+                            </div>
+                            <div class="absolute top-0 right-0 w-20 h-20 bg-white bg-opacity-10 rounded-full -mr-10 -mt-10"></div>
+                        </a>
+
+                        <!-- My Reading History -->
+                        <a href="{% url 'reading_history' %}" class="group relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-xl p-4 sm:p-5 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center mr-4 group-hover:bg-opacity-30 transition-all duration-300">
+                                    <i class="fas fa-trophy text-white text-lg"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-white text-sm sm:text-base">Reading History</h3>
+                                    <p class="text-green-100 text-xs sm:text-sm">Track your progress</p>
+                                </div>
+                            </div>
+                            <div class="absolute top-0 right-0 w-20 h-20 bg-white bg-opacity-10 rounded-full -mr-10 -mt-10"></div>
+                        </a>
+
+                        <!-- My Loans -->
+                        <a href="{% url 'my_loans' %}" class="group relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl p-4 sm:p-5 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center mr-4 group-hover:bg-opacity-30 transition-all duration-300">
+                                    <i class="fas fa-book-reader text-white text-lg"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-white text-sm sm:text-base">My Books</h3>
+                                    <p class="text-purple-100 text-xs sm:text-sm">View borrowed books</p>
+                                </div>
+                            </div>
+                            <div class="absolute top-0 right-0 w-20 h-20 bg-white bg-opacity-10 rounded-full -mr-10 -mt-10"></div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Recent History -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200">
                 <div class="px-6 py-4 border-b border-gray-200">
-                    <h2 class="text-xl font-semibold text-gray-900 flex items-center">
-                        <i class="fas fa-history mr-3 text-gray-600"></i>
-                        Recent History
-                    </h2>
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                            <i class="fas fa-history mr-3 text-gray-600"></i>
+                            Recent History
+                        </h2>
+                        <a href="{% url 'reading_history' %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            View All History
+                        </a>
+                    </div>
                 </div>
                 <div class="p-6">
                     {% if loan_history %}

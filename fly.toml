@@ -53,6 +53,7 @@ console_command = '/app/manage.py shell'
   guest_path = '/app/static'
   url_prefix = '/static/'
 
-[[metrics]]
-  port = 8080
-  path = '/metrics'
+# Metrics endpoint removed - not implemented in Django app
+# [[metrics]]
+#   port = 8080
+#   path = '/metrics'

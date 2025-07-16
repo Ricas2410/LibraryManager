@@ -136,7 +136,8 @@
             <div class="h-2 bg-gradient-to-r from-green-500 to-green-600"></div>
         </div>
 
-        <!-- Active Users Card -->
+        {% if user.can_manage_books %}
+        <!-- Active Users Card (Admins/Librarians only) -->
         <div class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 card-hover overflow-hidden">
             <div class="p-6">
                 <div class="flex items-center justify-between">
@@ -156,6 +157,7 @@
             </div>
             <div class="h-2 bg-gradient-to-r from-purple-500 to-purple-600"></div>
         </div>
+        {% endif %}
 
         <!-- Active Loans Card -->
         <div class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 card-hover overflow-hidden">

@@ -17,7 +17,7 @@ class CustomUserCreationForm(UserCreationForm):
         required=False
     )
     enrollment_number = forms.CharField(max_length=20, required=False)
-    class_grade = forms.CharField(max_length=10, required=False)
+    class_grade = forms.CharField(max_length=50, required=False)
 
     # Additional notification email (optional)
     notification_email = forms.EmailField(

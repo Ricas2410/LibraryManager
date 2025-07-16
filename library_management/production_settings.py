@@ -111,3 +111,8 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 # Media files settings - Keep MEDIA_ROOT for migration compatibility
 MEDIA_URL = '/media/'
 MEDIA_ROOT = '/tmp/media'  # Temporary location for migration
+
+# File upload settings for CSV imports
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+FILE_UPLOAD_TEMP_DIR = '/tmp'

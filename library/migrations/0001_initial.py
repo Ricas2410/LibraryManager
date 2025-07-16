@@ -130,7 +130,7 @@ class Migration(migrations.Migration):
                 ('address', models.TextField(blank=True, null=True)),
                 ('date_of_birth', models.DateField(blank=True, null=True)),
                 ('enrollment_number', models.CharField(blank=True, max_length=20, null=True, unique=True)),
-                ('class_grade', models.CharField(blank=True, max_length=10, null=True)),
+                ('class_grade', models.CharField(blank=True, max_length=50, null=True)),
                 ('profile_picture', models.ImageField(blank=True, null=True, upload_to='profile_pics/')),
                 ('is_active_member', models.BooleanField(default=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),

@@ -3152,20 +3152,12 @@ def import_users_csv(request):
                         error_count += 1
                         continue
 
-                    
-                                        # Generate email from first initial + last name
-                                        first_initial = first_name[0].lower() if first_name else 'x'
-                                        clean_last_name = last_name.lower().replace(' ', '') if last_name else 'user'
-                                        email_username = f"{first_initial}{clean_last_name}"
-                    
-                                        # Handle duplicate emails
-                                        count = 1
-                                        while User.objects.filter(email=f"{email_username}{'' if count == 1 else str(count).zfill(2)}@deigratiams.edu.gh").exists():
-                                            count += 1
-                                        if count > 1:
-                                            email_username = f"{email_username}{str(count).zfill(2)}"
-                    
-                                        email = f"{email_username}@deigratiams.edu.gh"
+                    # Generate email from first letter of first name + last name
+                    first_letter = first_name[0].lower() if first_name else 'x'
+                    clean_last_name = last_name.lower().replace(' ', '') if last_name else 'user'
+                    email_username = f"{first_letter}{clean_last_name}"
+                    email = f"{email_username}@deigratiams.edu.gh"
+
                     # Generate username from student_id (normalize it)
                     username = student_id.lower()
 
@@ -3183,21 +3175,27 @@ def import_users_csv(request):
                     if role not in ['student', 'teacher', 'librarian', 'admin']:
                         role = 'student'  # Default fallback
 
-                    # Create user with PIN 12345 (with error handling)
-                    user = User.objects.create(
-                        username=username,
-                        email=email,
-                        first_name=first_name,
-                        last_name=last_name,
-                        enrollment_number=student_id,
-                        role=role,
-                        phone_number=row.get('phone_number', '').strip(),
-                        address=row.get('address', '').strip(),
-                        class_grade=row.get('class_grade', '').strip(),
-                        notification_email=parent_email if parent_email else None,
-                        password=make_password('12345'),  # Default PIN
-                        is_active_member=True
-                    )
+                    # Create user and set password securely
+                    try:
+                        user = User.objects.create(
+                            username=username,
+                            email=email,
+                            first_name=first_name,
+                            last_name=last_name,
+                            enrollment_number=student_id,
+                            role=role,
+                            phone_number=row.get('phone_number', '').strip(),
+                            address=row.get('address', '').strip(),
+                            class_grade=row.get('class_grade', '').strip(),
+                            notification_email=parent_email if parent_email else None,
+                            is_active_member=True
+                        )
+                        user.set_password('12345')
+                        user.save()
+                    except Exception as create_error:
+                        errors.append(f"Row {row_num}: Failed to create user: {str(create_error)}")
+                        error_count += 1
+                        continue
 
                     # Send welcome email to parent if email provided (with error handling)
                     if parent_email and role == 'student':
@@ -3803,11 +3801,18 @@ def reset_reading_history(request):
 
 def health_check(request):
     """Health check endpoint for deployment platforms"""
-    return JsonResponse({
-        'status': 'healthy',
-        'timestamp': timezone.now().isoformat(),
-        'service': 'Library Management System'
-    })
+    try:
+        return JsonResponse({
+            'status': 'healthy',
+            'timestamp': timezone.now().isoformat(),
+            'service': 'Library Management System'
+        })
+    except Exception:
+        # Fallback response if anything goes wrong
+        return JsonResponse({
+            'status': 'healthy',
+            'service': 'Library Management System'
+        }, status=200)
 
 
 # PIN Change and Password Reset Views

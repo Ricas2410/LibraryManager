@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-bullseye
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -8,6 +8,15 @@ ENV DJANGO_SETTINGS_MODULE=library_management.production_settings
 
 # Set work directory
 WORKDIR /app
+
+# Install system dependencies including cryptographic libraries and OpenSSL runtime
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libc6-dev \
+    libssl-dev \
+    libffi-dev \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
 COPY requirements.txt .
